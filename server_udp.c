@@ -40,6 +40,11 @@ static int setup_socket(const char *listen_ip, int port)
         return -1;
     }
 
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
+    {
+        perror("setsockopt SO_REUSEPORT (ignorando erro)");
+    }
+
     struct timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
@@ -76,6 +81,7 @@ static int setup_socket(const char *listen_ip, int port)
         perror("bind");
         printf("[DEBUG] Falha ao fazer bind no endereço %s:%d\n",
                (servaddr.sin_addr.s_addr == INADDR_ANY) ? "0.0.0.0" : listen_ip, port);
+        printf("[DEBUG] Verifique se a porta não está em uso: netstat -ulnp | grep %d\n", port);
         close(sockfd);
         return -1;
     }
@@ -86,6 +92,11 @@ static int setup_socket(const char *listen_ip, int port)
         printf("[SERVER] UDP servidor iniciado e ouvindo em %s:%d\n",
                inet_ntoa(servaddr.sin_addr), ntohs(servaddr.sin_port));
     }
+
+    printf("[DEBUG] Para testar conectividade externa:\n");
+    printf("[DEBUG]   1. No WSL: netstat -ulnp | grep %d\n", port);
+    printf("[DEBUG]   2. No Windows: netstat -an | findstr %d\n", port);
+    printf("[DEBUG]   3. Do cliente: nc -u <ip_wsl> %d\n", port);
 
     return sockfd;
 }
@@ -115,7 +126,7 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
         return -1;
     }
 
-    printf("[SERVER] Recebido %zd bytes de %s:%d — ecoando de volta\n",
+    printf("[SERVER] ✓ Recebido %zd bytes de %s:%d — ecoando de volta\n",
            nbytes,
            inet_ntoa(cliaddr.sin_addr),
            ntohs(cliaddr.sin_port));
