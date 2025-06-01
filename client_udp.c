@@ -56,21 +56,30 @@ static int setup_socket(const char *local_ip)
         return -1;
     }
 
-    struct sockaddr_in localaddr;
-    memset(&localaddr, 0, sizeof(localaddr));
-    localaddr.sin_family = AF_INET;
-    localaddr.sin_port = htons(0);
-    if (inet_aton(local_ip, &localaddr.sin_addr) == 0)
+    // Se local_ip for "0.0.0.0" ou "auto", não faz bind específico
+    if (strcmp(local_ip, "0.0.0.0") != 0 && strcmp(local_ip, "auto") != 0)
     {
-        fprintf(stderr, "IP local inválido: %s\n", local_ip);
-        close(sockfd);
-        return -1;
+        struct sockaddr_in localaddr;
+        memset(&localaddr, 0, sizeof(localaddr));
+        localaddr.sin_family = AF_INET;
+        localaddr.sin_port = htons(0);
+        if (inet_aton(local_ip, &localaddr.sin_addr) == 0)
+        {
+            fprintf(stderr, "IP local inválido: %s\n", local_ip);
+            close(sockfd);
+            return -1;
+        }
+        if (bind(sockfd, (struct sockaddr *)&localaddr, sizeof(localaddr)) < 0)
+        {
+            perror("bind local");
+            close(sockfd);
+            return -1;
+        }
+        printf("[CLIENT] Bind local feito em %s\n", local_ip);
     }
-    if (bind(sockfd, (struct sockaddr *)&localaddr, sizeof(localaddr)) < 0)
+    else
     {
-        perror("bind local");
-        close(sockfd);
-        return -1;
+        printf("[CLIENT] Usando bind automático (qualquer interface local)\n");
     }
 
     struct timeval tv;
@@ -178,8 +187,8 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr,
                 "Uso: %s <local_ip> <server_ip> <server_port> <client_id>\n"
-                "  <local_ip>   : IP do cliente (ex.: 10.0.10.11)\n"
-                "  <server_ip>  : IP do servidor UDP (ex.: 10.0.10.12)\n"
+                "  <local_ip>   : IP do cliente (ex.: 10.0.0.11) ou 'auto' para automático\n"
+                "  <server_ip>  : IP do servidor UDP (ex.: 10.0.0.12)\n"
                 "  <server_port>: Porta UDP do servidor (ex.: 50000)\n"
                 "  <client_id>  : ID do cliente (1 ou 2)\n",
                 argv[0]);
@@ -195,6 +204,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "client_id deve ser 1 ou 2\n");
         return EXIT_FAILURE;
     }
+
+    printf("[CLIENT %d] Iniciando cliente...\n", client_id);
+    printf("[DEBUG] Local IP: %s, Server: %s:%d\n", local_ip, server_ip, server_port);
 
     int sockfd = setup_socket(local_ip);
     if (sockfd < 0)

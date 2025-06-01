@@ -10,11 +10,17 @@
 #define MAX_BUFFER 65536
 
 static volatile int running = 1;
+static int server_sockfd = -1;
 
 static void signal_handler(int sig)
 {
     printf("\n[SERVER] Recebido sinal %d, parando servidor...\n", sig);
     running = 0;
+    if (server_sockfd >= 0)
+    {
+        close(server_sockfd);
+        server_sockfd = -1;
+    }
 }
 
 static int setup_socket(const char *listen_ip, int port)
@@ -143,51 +149,49 @@ static void serve_forever(int sockfd)
     {
         handle_one_packet(sockfd, buffer);
     }
-    signal(SIGTERM, signal_handler);
+
     printf("[SERVER] Servidor parado.\n");
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc != 3)
+    {
+        fprintf(stderr, "Uso: %s <listen_ip> <port>\n", argv[0]);
+        fprintf(stderr, "  <listen_ip>: IP para bind (use '0.0.0.0' para todas as interfaces)\n");
+        fprintf(stderr, "  <port>: Porta UDP para escutar\n");
+        fprintf(stderr, "\nExemplos:\n");
+        fprintf(stderr, "  %s 0.0.0.0 50000        # Escuta em todas as interfaces\n", argv[0]);
+        fprintf(stderr, "  %s 10.0.0.12 50000      # Escuta apenas no IP específico\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
     const char *listen_ip = argv[1];
     int port = atoi(argv[2]);
-    int main(int argc, char *argv[]) if (port <= 0 || port > 65535)
+
+    if (port <= 0 || port > 65535)
     {
-        f(argc != 3)
-            fprintf(stderr, "Porta inválida: %d (deve estar entre 1-65535)\n", port);
-        return EXIT_FAILURE;: %s <listen_ip> <port>\n", argv[0]);
+        fprintf(stderr, "Porta inválida: %d (deve estar entre 1-65535)\n", port);
+        return EXIT_FAILURE;
     }
-    fprintf(stderr, "  <listen_ip>: IP para bind (use '0.0.0.0' para todas as interfaces)\n");
-    fprintf(stderr, "  <port>: Porta UDP para escutar\n");
+
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     printf("[SERVER] Iniciando servidor UDP...\n");
     printf("[DEBUG] IP: %s, Porta: %d\n", listen_ip, port);
-    em todas as interfaces\n ", argv[0]);
-        fprintf(stderr, "  %s 10.0.0.12 50000      # Escuta apenas no IP específico\n", argv[0]);
-    int sockfd = setup_socket(listen_ip, port);
-    if (sockfd < 0)
+
+    server_sockfd = setup_socket(listen_ip, port);
+    if (server_sockfd < 0)
     {
-        return EXIT_FAILURE;ndler);
+        return EXIT_FAILURE;
     }
-    ignal(SIGTERM, signal_handler);
 
-    serve_forever(sockfd);
-    = argv[1];
-    int port = atoi(argv[2]);
-    close(sockfd);
-    return EXIT_SUCCESS;t > 65535)
-}
-{
-    fprintf(stderr, "Porta inválida: %d (deve estar entre 1-65535)\n", port);
-    return EXIT_FAILURE;
-}
+    serve_forever(server_sockfd);
 
-printf("[SERVER] Iniciando servidor UDP...\n");
-printf("[DEBUG] IP: %s, Porta: %d\n", listen_ip, port);
-
-int sockfd = setup_socket(listen_ip, port);
-if (sockfd < 0)
-{
-    return EXIT_FAILURE;
-}
-
-serve_forever(sockfd);
-
-close(sockfd);
-return EXIT_SUCCESS;
+    if (server_sockfd >= 0)
+    {
+        close(server_sockfd);
+    }
+    return EXIT_SUCCESS;
 }
