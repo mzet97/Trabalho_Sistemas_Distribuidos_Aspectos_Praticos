@@ -1,0 +1,22 @@
+# Executables
+client_udp
+client_udp_ramp
+server_udp
+
+# Data files
+ramp_data_cliente1.csv
+ramp_data_cliente2.csv
+raw_data_cliente1.csv
+raw_data_cliente2.csv
+
+# Statistics files
+stats_cliente1.csv
+stats_cliente2.csv
+stats_ramp_cliente1.csv
+stats_ramp_cliente2.csv
+
+# Generated images
+rtt_ramp_vs_level_cliente1.png
+rtt_ramp_vs_level_cliente2.png
+rtt_vs_size_cliente1.png
+rtt_vs_size_cliente2.png
