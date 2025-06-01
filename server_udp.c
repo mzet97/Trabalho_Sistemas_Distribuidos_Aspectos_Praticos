@@ -4,8 +4,17 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <signal.h>
 
 #define MAX_BUFFER 65536
+
+static volatile int running = 1;
+
+static void signal_handler(int sig)
+{
+    printf("\n[SERVER] Recebido sinal %d, parando servidor...\n", sig);
+    running = 0;
+}
 
 static int setup_socket(const char *listen_ip, int port)
 {
@@ -16,25 +25,51 @@ static int setup_socket(const char *listen_ip, int port)
         return -1;
     }
 
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        perror("setsockopt SO_REUSEADDR");
+        close(sockfd);
+        return -1;
+    }
+
     struct sockaddr_in servaddr;
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(port);
-    if (inet_aton(listen_ip, &servaddr.sin_addr) == 0)
+
+    if (strcmp(listen_ip, "0.0.0.0") == 0 || strlen(listen_ip) == 0)
     {
-        fprintf(stderr, "IP inválido para bind: %s\n", listen_ip);
-        close(sockfd);
-        return -1;
+        servaddr.sin_addr.s_addr = INADDR_ANY;
+        printf("[SERVER] Configurado para escutar em todas as interfaces (0.0.0.0:%d)\n", port);
+    }
+    else
+    {
+        if (inet_aton(listen_ip, &servaddr.sin_addr) == 0)
+        {
+            fprintf(stderr, "IP inválido para bind: %s\n", listen_ip);
+            close(sockfd);
+            return -1;
+        }
+        printf("[SERVER] Configurado para escutar no IP específico %s:%d\n", listen_ip, port);
     }
 
     if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
         perror("bind");
+        printf("[DEBUG] Falha ao fazer bind no endereço %s:%d\n",
+               (servaddr.sin_addr.s_addr == INADDR_ANY) ? "0.0.0.0" : listen_ip, port);
         close(sockfd);
         return -1;
     }
 
-    printf("[SERVER] UDP iterativo ouvindo em %s:%d\n", listen_ip, port);
+    socklen_t addr_len = sizeof(servaddr);
+    if (getsockname(sockfd, (struct sockaddr *)&servaddr, &addr_len) == 0)
+    {
+        printf("[SERVER] UDP servidor iniciado e ouvindo em %s:%d\n",
+               inet_ntoa(servaddr.sin_addr), ntohs(servaddr.sin_port));
+    }
+
     return sockfd;
 }
 
@@ -52,7 +87,10 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
         &len);
     if (nbytes < 0)
     {
-        perror("recvfrom");
+        if (running)
+        {
+            perror("recvfrom");
+        }
         return -1;
     }
 
@@ -73,6 +111,10 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
         perror("sendto");
         return -1;
     }
+    if (sent != nbytes)
+    {
+        printf("[WARN] Enviado apenas %zd de %zd bytes\n", sent, nbytes);
+    }
 
     return 0;
 }
@@ -80,10 +122,14 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
 static void serve_forever(int sockfd)
 {
     unsigned char buffer[MAX_BUFFER];
-    while (1)
+    printf("[SERVER] Aguardando conexões... (Ctrl+C para parar)\n");
+
+    while (running)
     {
         handle_one_packet(sockfd, buffer);
     }
+
+    printf("[SERVER] Servidor parado.\n");
 }
 
 int main(int argc, char *argv[])
@@ -91,11 +137,28 @@ int main(int argc, char *argv[])
     if (argc != 3)
     {
         fprintf(stderr, "Uso: %s <listen_ip> <port>\n", argv[0]);
+        fprintf(stderr, "  <listen_ip>: IP para bind (use '0.0.0.0' para todas as interfaces)\n");
+        fprintf(stderr, "  <port>: Porta UDP para escutar\n");
+        fprintf(stderr, "\nExemplos:\n");
+        fprintf(stderr, "  %s 0.0.0.0 50000        # Escuta em todas as interfaces\n", argv[0]);
+        fprintf(stderr, "  %s 10.0.0.12 50000      # Escuta apenas no IP específico\n", argv[0]);
         return EXIT_FAILURE;
     }
 
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     const char *listen_ip = argv[1];
     int port = atoi(argv[2]);
+
+    if (port <= 0 || port > 65535)
+    {
+        fprintf(stderr, "Porta inválida: %d (deve estar entre 1-65535)\n", port);
+        return EXIT_FAILURE;
+    }
+
+    printf("[SERVER] Iniciando servidor UDP...\n");
+    printf("[DEBUG] IP: %s, Porta: %d\n", listen_ip, port);
 
     int sockfd = setup_socket(listen_ip, port);
     if (sockfd < 0)
