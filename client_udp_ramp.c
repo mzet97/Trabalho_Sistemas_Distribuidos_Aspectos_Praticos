@@ -94,38 +94,51 @@ static int setup_socket(const char *local_ip)
         return -1;
     }
 
-    if (strcmp(local_ip, "0.0.0.0") != 0 && strcmp(local_ip, "auto") != 0)
+    if (strcmp(local_ip, "auto") == 0 || strcmp(local_ip, "0.0.0.0") == 0)
+    {
+        printf("[CLIENT] Usando bind automático (sistema escolhe interface)\n");
+    }
+    else
     {
         struct sockaddr_in localaddr;
         memset(&localaddr, 0, sizeof(localaddr));
         localaddr.sin_family = AF_INET;
         localaddr.sin_port = htons(0);
+
         if (inet_aton(local_ip, &localaddr.sin_addr) == 0)
         {
             fprintf(stderr, "IP local inválido: %s\n", local_ip);
             close(sockfd);
             return -1;
         }
+
         if (bind(sockfd, (struct sockaddr *)&localaddr, sizeof(localaddr)) < 0)
         {
             perror("bind local");
-            close(sockfd);
-            return -1;
+            printf("[DEBUG] Falha no bind em %s - tentando bind automático\n", local_ip);
         }
-        printf("[CLIENT] Bind local feito em %s\n", local_ip);
-    }
-    else
-    {
-        printf("[CLIENT] Usando bind automático (qualquer interface local)\n");
+        else
+        {
+            printf("[CLIENT] Bind local feito em %s\n", local_ip);
+        }
     }
 
-    struct timeval tv = {.tv_sec = 2, .tv_usec = 0};
+    struct timeval tv = {.tv_sec = 5, .tv_usec = 0};
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
     {
         perror("setsockopt");
         close(sockfd);
         return -1;
     }
+
+    struct sockaddr_in local_info;
+    socklen_t local_len = sizeof(local_info);
+    if (getsockname(sockfd, (struct sockaddr *)&local_info, &local_len) == 0)
+    {
+        printf("[DEBUG] Socket local: %s:%d\n",
+               inet_ntoa(local_info.sin_addr), ntohs(local_info.sin_port));
+    }
+
     return sockfd;
 }
 

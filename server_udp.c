@@ -143,6 +143,11 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
         perror("sendto");
         return -1;
     }
+    else
+    {
+        printf("DEBUG_SERVER: enviou %zd bytes para %s:%d\n", sent,
+               inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
+    }
     if (sent != nbytes)
     {
         printf("[WARN] Enviado apenas %zd de %zd bytes\n", sent, nbytes);

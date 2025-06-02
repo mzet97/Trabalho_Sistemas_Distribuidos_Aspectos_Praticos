@@ -8,6 +8,7 @@ echo "Servidor: $SERVER_IP:$SERVER_PORT"
 
 for i in {1..30}; do
   echo "Executando instância $i/30 do Cliente 1..."
+  # Usar 'auto' em vez de IP específico para evitar problemas de bind
   ./client_udp auto $SERVER_IP $SERVER_PORT 1
   
   if [ $? -ne 0 ]; then

@@ -56,40 +56,51 @@ static int setup_socket(const char *local_ip)
         return -1;
     }
 
-    // Se local_ip for "0.0.0.0" ou "auto", não faz bind específico
-    if (strcmp(local_ip, "0.0.0.0") != 0 && strcmp(local_ip, "auto") != 0)
+    if (strcmp(local_ip, "auto") == 0 || strcmp(local_ip, "0.0.0.0") == 0)
+    {
+        printf("[CLIENT] Usando bind automático (sistema escolhe interface)\n");
+    }
+    else
     {
         struct sockaddr_in localaddr;
         memset(&localaddr, 0, sizeof(localaddr));
         localaddr.sin_family = AF_INET;
-        localaddr.sin_port = htons(0);
+        localaddr.sin_port = htons(0); // Porta automática
+
         if (inet_aton(local_ip, &localaddr.sin_addr) == 0)
         {
             fprintf(stderr, "IP local inválido: %s\n", local_ip);
             close(sockfd);
             return -1;
         }
+
         if (bind(sockfd, (struct sockaddr *)&localaddr, sizeof(localaddr)) < 0)
         {
             perror("bind local");
-            close(sockfd);
-            return -1;
+            printf("[DEBUG] Falha no bind em %s - tentando bind automático\n", local_ip);
         }
-        printf("[CLIENT] Bind local feito em %s\n", local_ip);
-    }
-    else
-    {
-        printf("[CLIENT] Usando bind automático (qualquer interface local)\n");
+        else
+        {
+            printf("[CLIENT] Bind local feito em %s\n", local_ip);
+        }
     }
 
     struct timeval tv;
-    tv.tv_sec = 2;
+    tv.tv_sec = 5;
     tv.tv_usec = 0;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
     {
         perror("setsockopt");
         close(sockfd);
         return -1;
+    }
+
+    struct sockaddr_in local_info;
+    socklen_t local_len = sizeof(local_info);
+    if (getsockname(sockfd, (struct sockaddr *)&local_info, &local_len) == 0)
+    {
+        printf("[DEBUG] Socket local: %s:%d\n",
+               inet_ntoa(local_info.sin_addr), ntohs(local_info.sin_port));
     }
 
     return sockfd;
@@ -104,6 +115,11 @@ static void do_warmup(int sockfd, struct sockaddr_in *servaddr, int payload_size
         if (sent < 0)
         {
             perror("sendto (warmup)");
+        }
+        else
+        {
+            printf("[DEBUG_CLIENT] Enviado %zd bytes para %s:%d\n",
+                   sent, inet_ntoa(servaddr->sin_addr), ntohs(servaddr->sin_port));
         }
         (void)recvfrom(sockfd, buffer, payload_size, 0, NULL, NULL);
     }
@@ -127,13 +143,22 @@ static void measure_for_size(int sockfd, struct sockaddr_in *servaddr, int paylo
             continue;
         }
 
+        printf("[DEBUG] Enviando %d bytes para %s:%d (iteração %d)\n",
+               payload_size, inet_ntoa(servaddr->sin_addr),
+               ntohs(servaddr->sin_port), i);
+
         ssize_t sent = sendto(sockfd, buffer, payload_size, 0,
                               (struct sockaddr *)servaddr, sizeof(*servaddr));
         if (sent < 0)
         {
             perror("sendto (measure)");
+            printf("[ERROR] Falha ao enviar pacote %d de tamanho %d\n", i, payload_size);
             fprintf(fp, "%d,%d,%.3f\n", payload_size, i, -1.0);
             continue;
+        }
+        else
+        {
+            printf("[DEBUG] Enviado %zd bytes - aguardando resposta...\n", sent);
         }
 
         ssize_t rec = recvfrom(sockfd, buffer, payload_size, 0, NULL, NULL);
@@ -141,14 +166,20 @@ static void measure_for_size(int sockfd, struct sockaddr_in *servaddr, int paylo
         {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
             {
+                printf("[TIMEOUT] Timeout na resposta do pacote %d\n", i);
                 fprintf(fp, "%d,%d,%.3f\n", payload_size, i, -1.0);
             }
             else
             {
                 perror("recvfrom");
+                printf("[ERROR] Erro no recvfrom do pacote %d\n", i);
                 fprintf(fp, "%d,%d,%.3f\n", payload_size, i, -1.0);
             }
             continue;
+        }
+        else
+        {
+            printf("[DEBUG] Recebido %zd bytes\n", rec);
         }
 
         if (clock_gettime(CLOCK_MONOTONIC, &t_end) < 0)
@@ -167,6 +198,7 @@ static void measure_for_size(int sockfd, struct sockaddr_in *servaddr, int paylo
 
         rtt_ms = diff_ms(&t_start, &t_end);
         fprintf(fp, "%d,%d,%.5f\n", payload_size, i, rtt_ms);
+        printf("[SUCCESS] RTT = %.3f ms\n", rtt_ms);
     }
 }
 
