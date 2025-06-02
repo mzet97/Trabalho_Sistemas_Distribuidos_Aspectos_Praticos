@@ -45,8 +45,16 @@ static int setup_socket(const char *listen_ip, int port)
         perror("setsockopt SO_REUSEPORT (ignorando erro)");
     }
 
+    // Aumentar buffer de recepção
+    int rcvbuf = 262144; // 256KB
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf)) < 0)
+    {
+        perror("setsockopt SO_RCVBUF (ignorando erro)");
+    }
+
+    // Remover timeout muito restritivo para debug
     struct timeval tv;
-    tv.tv_sec = 1;
+    tv.tv_sec = 5; // Aumentado de 1 para 5 segundos
     tv.tv_usec = 0;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
     {
@@ -82,6 +90,7 @@ static int setup_socket(const char *listen_ip, int port)
         printf("[DEBUG] Falha ao fazer bind no endereço %s:%d\n",
                (servaddr.sin_addr.s_addr == INADDR_ANY) ? "0.0.0.0" : listen_ip, port);
         printf("[DEBUG] Verifique se a porta não está em uso: netstat -ulnp | grep %d\n", port);
+        printf("[DEBUG] Erro específico: %s\n", strerror(errno));
         close(sockfd);
         return -1;
     }
@@ -89,14 +98,15 @@ static int setup_socket(const char *listen_ip, int port)
     socklen_t addr_len = sizeof(servaddr);
     if (getsockname(sockfd, (struct sockaddr *)&servaddr, &addr_len) == 0)
     {
-        printf("[SERVER] UDP servidor iniciado e ouvindo em %s:%d\n",
+        printf("[SERVER] ✓ UDP servidor ATIVO em %s:%d\n",
                inet_ntoa(servaddr.sin_addr), ntohs(servaddr.sin_port));
     }
 
-    printf("[DEBUG] Para testar conectividade externa:\n");
-    printf("[DEBUG]   1. No WSL: netstat -ulnp | grep %d\n", port);
-    printf("[DEBUG]   2. No Windows: netstat -an | findstr %d\n", port);
-    printf("[DEBUG]   3. Do cliente: nc -u <ip_wsl> %d\n", port);
+    printf("[DEBUG] Para testar conectividade:\n");
+    printf("[DEBUG]   1. WSL: ss -ulnp | grep %d\n", port);
+    printf("[DEBUG]   2. Windows: netsh interface portproxy show all\n");
+    printf("[DEBUG]   3. Teste: echo 'TEST' | nc -u <ip_wsl> %d\n", port);
+    printf("[DEBUG] Aguardando primeiro pacote...\n");
 
     return sockfd;
 }
@@ -106,6 +116,8 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
     struct sockaddr_in cliaddr;
     socklen_t len = sizeof(cliaddr);
 
+    printf("[SERVER] Aguardando recepção de dados...\n");
+
     ssize_t nbytes = recvfrom(
         sockfd,
         buffer,
@@ -113,23 +125,36 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
         0,
         (struct sockaddr *)&cliaddr,
         &len);
+
     if (nbytes < 0)
     {
         if (errno == EWOULDBLOCK || errno == EAGAIN)
         {
+            printf("[SERVER] Timeout na recepção (nenhum dado recebido)\n");
             return 0;
         }
         if (running)
         {
             perror("recvfrom");
+            printf("[ERROR] Erro na recepção: %s\n", strerror(errno));
         }
         return -1;
     }
 
-    printf("[SERVER] ✓ Recebido %zd bytes de %s:%d — ecoando de volta\n",
+    printf("[SERVER] ✓ RECEBIDO %zd bytes de %s:%d\n",
            nbytes,
            inet_ntoa(cliaddr.sin_addr),
            ntohs(cliaddr.sin_port));
+
+    // Log dos primeiros bytes para debug
+    printf("[DEBUG] Primeiros bytes: ");
+    for (int i = 0; i < (nbytes > 16 ? 16 : nbytes); i++)
+    {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
+
+    printf("[SERVER] Ecoando %zd bytes de volta...\n", nbytes);
 
     ssize_t sent = sendto(
         sockfd,
@@ -138,35 +163,48 @@ static int handle_one_packet(int sockfd, unsigned char *buffer)
         0,
         (struct sockaddr *)&cliaddr,
         len);
+
     if (sent < 0)
     {
         perror("sendto");
+        printf("[ERROR] Falha ao enviar resposta: %s\n", strerror(errno));
         return -1;
     }
-    else
-    {
-        printf("DEBUG_SERVER: enviou %zd bytes para %s:%d\n", sent,
-               inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
-    }
+
+    printf("[SERVER] ✓ ENVIADO %zd bytes de volta para %s:%d\n",
+           sent, inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
+
     if (sent != nbytes)
     {
         printf("[WARN] Enviado apenas %zd de %zd bytes\n", sent, nbytes);
     }
 
-    return 0;
+    return 1; // Sucesso
 }
 
 static void serve_forever(int sockfd)
 {
     unsigned char buffer[MAX_BUFFER];
-    printf("[SERVER] Aguardando conexões... (Ctrl+C para parar)\n");
+    int packet_count = 0;
+
+    printf("[SERVER] 🚀 Servidor ATIVO - aguardando conexões...\n");
+    printf("[SERVER] (Ctrl+C para parar)\n");
 
     while (running)
     {
-        handle_one_packet(sockfd, buffer);
+        int result = handle_one_packet(sockfd, buffer);
+        if (result > 0)
+        {
+            packet_count++;
+            printf("[SERVER] Total de pacotes processados: %d\n", packet_count);
+        }
+        else if (result < 0)
+        {
+            printf("[ERROR] Erro no processamento do pacote\n");
+        }
     }
 
-    printf("[SERVER] Servidor parado.\n");
+    printf("[SERVER] Servidor parado após processar %d pacotes.\n", packet_count);
 }
 
 int main(int argc, char *argv[])
