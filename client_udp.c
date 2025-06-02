@@ -91,7 +91,7 @@ static int setup_socket(const char *local_ip)
     }
 
     struct timeval tv;
-    tv.tv_sec = 10; // Aumentado para 10 segundos
+    tv.tv_sec = 10;
     tv.tv_usec = 0;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
     {
@@ -253,7 +253,6 @@ int main(int argc, char *argv[])
     printf("[CLIENT %d] 🚀 Iniciando cliente...\n", client_id);
     printf("[DEBUG] Local IP: %s, Server: %s:%d\n", local_ip, server_ip, server_port);
 
-    // Teste de conectividade básica
     printf("[CLIENT] 🔍 Testando conectividade com servidor...\n");
 
     int sockfd = setup_socket(local_ip);
@@ -275,8 +274,9 @@ int main(int argc, char *argv[])
 
     printf("[CLIENT] 🎯 Conectando com servidor %s:%d\n", server_ip, server_port);
 
-    // Teste de conectividade simples
-    char test_msg[] = "CONNECTIVITY_TEST";
+    char test_msg[] = "PING";
+    printf("[DEBUG] Enviando teste de conectividade: %s\n", test_msg);
+
     ssize_t test_sent = sendto(sockfd, test_msg, strlen(test_msg), 0,
                                (struct sockaddr *)&servaddr, sizeof(servaddr));
     if (test_sent < 0)
@@ -287,17 +287,27 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    printf("[DEBUG] Aguardando resposta do servidor...\n");
     char test_response[64];
-    ssize_t test_rec = recvfrom(sockfd, test_response, sizeof(test_response), 0, NULL, NULL);
+    ssize_t test_rec = recvfrom(sockfd, test_response, sizeof(test_response) - 1, 0, NULL, NULL);
     if (test_rec < 0)
     {
-        printf("[ERROR] ❌ Servidor não respondeu ao teste de conectividade\n");
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+        {
+            printf("[ERROR] ❌ Timeout - servidor não respondeu ao teste de conectividade\n");
+        }
+        else
+        {
+            perror("recvfrom teste de conectividade");
+            printf("[ERROR] ❌ Erro ao receber resposta do servidor\n");
+        }
         printf("[DEBUG] Verifique se o servidor está rodando em %s:%d\n", server_ip, server_port);
         close(sockfd);
         return EXIT_FAILURE;
     }
 
-    printf("[CLIENT] ✅ Conectividade OK - servidor respondeu com %zd bytes\n", test_rec);
+    test_response[test_rec] = '\0';
+    printf("[CLIENT] ✅ Conectividade OK - servidor respondeu: %s (%zd bytes)\n", test_response, test_rec);
 
     char filename[64];
     snprintf(filename, sizeof(filename), "raw_data_cliente%d.csv", client_id);
