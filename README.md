@@ -112,46 +112,6 @@ make distclean
 
 ---
 
-## 5. Configuração de Redes Simuladas
-
-Será criada uma interface dummy para 10 Mb/s (`eth1`) e outra para 100 Mb/s (`eth2`).
-
-1. **Carregar módulo dummy**  
-
-   ```bash
-   sudo modprobe dummy
-   ```
-
-2. **Configurar `eth1` (10 Mb/s)**  
-
-   ```bash
-   sudo ip link add name eth1 type dummy
-   sudo ip link set dev eth1 up
-   sudo ip addr add 10.0.10.12/24 dev eth1   # IP do servidor em 10 Mb/s
-   sudo tc qdisc add dev eth1 root tbf rate 10mbit burst 32kbit latency 400ms
-   ```
-
-3. **Configurar `eth2` (100 Mb/s)**  
-
-   ```bash
-   sudo ip link add name eth2 type dummy
-   sudo ip link set dev eth2 up
-   sudo ip addr add 10.0.100.12/24 dev eth2  # IP do servidor em 100 Mb/s
-   sudo tc qdisc add dev eth2 root tbf rate 100mbit burst 32kbit latency 100ms
-   ```
-
-> **Observação – limpeza**  
-> Para remover as interfaces e regras, execute:
->
-> ```bash
-> sudo tc qdisc del dev eth1 root
-> sudo tc qdisc del dev eth2 root
-> sudo ip link del eth1
-> sudo ip link del eth2
-> ```
-
----
-
 ## 6. Executando o Servidor
 
 Abra duas abas/janelas no Ubuntu/WSL:
@@ -364,19 +324,6 @@ rtt_vs_size_cliente1.png
 rtt_vs_size_cliente2.png
 rtt_ramp_vs_level_cliente1.png
 rtt_ramp_vs_level_cliente2.png
-```
-
----
-
-## 11. Limpeza de Configurações de Rede
-
-Quando terminar, remova regras e interfaces dummy:
-
-```bash
-sudo tc qdisc del dev eth1 root
-sudo tc qdisc del dev eth2 root
-sudo ip link del eth1
-sudo ip link del eth2
 ```
 
 ---

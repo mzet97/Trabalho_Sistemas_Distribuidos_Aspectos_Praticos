@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        ".fantomasignore": "ignore",
+        "*.tsx": "typescriptreact",
+        "*.ts": "typescript",
+        "errno.h": "c"
+    }
+}

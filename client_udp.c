@@ -56,14 +56,12 @@ static int setup_socket(const char *local_ip)
         return -1;
     }
 
-    // Aumentar buffers
     int sndbuf = 262144, rcvbuf = 262144;
     setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
     setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
-
     if (strcmp(local_ip, "auto") == 0 || strcmp(local_ip, "0.0.0.0") == 0)
     {
-        printf("[CLIENT] ✓ Usando bind automático (sistema escolhe interface)\n");
+        printf("[CLIENT] Usando bind automático (sistema escolhe interface)\n");
     }
     else
     {
@@ -86,7 +84,7 @@ static int setup_socket(const char *local_ip)
         }
         else
         {
-            printf("[CLIENT] ✓ Bind local feito em %s\n", local_ip);
+            printf("[CLIENT] Bind local feito em %s\n", local_ip);
         }
     }
 
@@ -104,7 +102,7 @@ static int setup_socket(const char *local_ip)
     socklen_t local_len = sizeof(local_info);
     if (getsockname(sockfd, (struct sockaddr *)&local_info, &local_len) == 0)
     {
-        printf("[CLIENT] 🔗 Socket local: %s:%d\n",
+        printf("[CLIENT] Socket local: %s:%d\n",
                inet_ntoa(local_info.sin_addr), ntohs(local_info.sin_port));
     }
 
@@ -121,11 +119,6 @@ static void do_warmup(int sockfd, struct sockaddr_in *servaddr, int payload_size
         {
             perror("sendto (warmup)");
         }
-        else
-        {
-            printf("[DEBUG_CLIENT] Enviado %zd bytes para %s:%d\n",
-                   sent, inet_ntoa(servaddr->sin_addr), ntohs(servaddr->sin_port));
-        }
         (void)recvfrom(sockfd, buffer, payload_size, 0, NULL, NULL);
     }
 }
@@ -134,9 +127,6 @@ static void measure_for_size(int sockfd, struct sockaddr_in *servaddr, int paylo
 {
     unsigned char buffer[MAX_BUFFER];
     memset(buffer, 'A', payload_size);
-
-    printf("[TEST] 🧪 Iniciando teste para %d bytes\n", payload_size);
-
     do_warmup(sockfd, servaddr, payload_size, buffer);
 
     int success_count = 0;
@@ -147,46 +137,39 @@ static void measure_for_size(int sockfd, struct sockaddr_in *servaddr, int paylo
     {
         struct timespec t_start, t_end;
         double rtt_ms;
-
         if (clock_gettime(CLOCK_MONOTONIC, &t_start) < 0)
         {
             perror("clock_gettime start");
             continue;
         }
 
-        printf("[CLIENT] 📤 Enviando pacote %d/%d (%d bytes) para %s:%d\n",
-               i, NUM_MEASURES, payload_size,
-               inet_ntoa(servaddr->sin_addr), ntohs(servaddr->sin_port));
-
         ssize_t sent = sendto(sockfd, buffer, payload_size, 0,
                               (struct sockaddr *)servaddr, sizeof(*servaddr));
         if (sent < 0)
         {
             perror("sendto");
-            printf("[ERROR] ❌ Falha ao enviar pacote %d (erro: %s)\n", i, strerror(errno));
+            printf("[ERROR] Falha ao enviar pacote %d (erro: %s)\n", i, strerror(errno));
             fprintf(fp, "%d,%d,%.3f\n", payload_size, i, -1.0);
             error_count++;
             continue;
         }
         else if (sent != payload_size)
         {
-            printf("[WARN] ⚠️ Enviado apenas %zd de %d bytes\n", sent, payload_size);
+            printf("[WARN] Enviado apenas %zd de %d bytes\n", sent, payload_size);
         }
-
-        printf("[CLIENT] 📥 Aguardando resposta do servidor...\n");
 
         ssize_t rec = recvfrom(sockfd, buffer, payload_size, 0, NULL, NULL);
         if (rec < 0)
         {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
             {
-                printf("[TIMEOUT] ⏰ Timeout na resposta do pacote %d\n", i);
+                printf("[TIMEOUT] Timeout na resposta do pacote %d\n", i);
                 timeout_count++;
             }
             else
             {
                 perror("recvfrom");
-                printf("[ERROR] ❌ Erro no recvfrom do pacote %d: %s\n", i, strerror(errno));
+                printf("[ERROR] Erro no recvfrom do pacote %d: %s\n", i, strerror(errno));
                 error_count++;
             }
             fprintf(fp, "%d,%d,%.3f\n", payload_size, i, -1.0);
@@ -199,15 +182,12 @@ static void measure_for_size(int sockfd, struct sockaddr_in *servaddr, int paylo
             fprintf(fp, "%d,%d,%.3f\n", payload_size, i, -1.0);
             continue;
         }
-
         if (rec != payload_size)
         {
-            printf("[WARN] ⚠️ Recebido %zd bytes (esperavam %d)\n", rec, payload_size);
+            printf("[WARN] Recebido %zd bytes (esperavam %d)\n", rec, payload_size);
         }
-
         rtt_ms = diff_ms(&t_start, &t_end);
         fprintf(fp, "%d,%d,%.5f\n", payload_size, i, rtt_ms);
-        printf("[SUCCESS] ✅ RTT = %.3f ms\n", rtt_ms);
         success_count++;
     }
 
@@ -220,7 +200,6 @@ static void run_tests(int sockfd, struct sockaddr_in *servaddr, FILE *fp)
     for (int idx = 0; idx < NSIZES; idx++)
     {
         int payload_size = sizes[idx];
-        printf("[TEST] Medindo payload = %d bytes\n", payload_size);
         measure_for_size(sockfd, servaddr, payload_size, fp);
         usleep(100000);
     }
@@ -249,11 +228,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "client_id deve ser 1 ou 2\n");
         return EXIT_FAILURE;
     }
+    printf("[CLIENT %d] Iniciando cliente...\n", client_id);
 
-    printf("[CLIENT %d] 🚀 Iniciando cliente...\n", client_id);
-    printf("[DEBUG] Local IP: %s, Server: %s:%d\n", local_ip, server_ip, server_port);
-
-    printf("[CLIENT] 🔍 Testando conectividade com servidor...\n");
+    printf("[CLIENT] Testando conectividade com servidor...\n");
 
     int sockfd = setup_socket(local_ip);
     if (sockfd < 0)
@@ -267,47 +244,42 @@ int main(int argc, char *argv[])
     servaddr.sin_port = htons(server_port);
     if (inet_aton(server_ip, &servaddr.sin_addr) == 0)
     {
-        fprintf(stderr, "❌ Endereço IP inválido: %s\n", server_ip);
+        fprintf(stderr, "Endereço IP inválido: %s\n", server_ip);
         close(sockfd);
         return EXIT_FAILURE;
     }
-
-    printf("[CLIENT] 🎯 Conectando com servidor %s:%d\n", server_ip, server_port);
+    printf("[CLIENT] Conectando com servidor %s:%d\n", server_ip, server_port);
 
     char test_msg[] = "PING";
-    printf("[DEBUG] Enviando teste de conectividade: %s\n", test_msg);
 
     ssize_t test_sent = sendto(sockfd, test_msg, strlen(test_msg), 0,
                                (struct sockaddr *)&servaddr, sizeof(servaddr));
     if (test_sent < 0)
     {
         perror("Teste de conectividade falhou");
-        printf("[ERROR] ❌ Não foi possível enviar dados para o servidor\n");
+        printf("[ERROR] Não foi possível enviar dados para o servidor\n");
         close(sockfd);
         return EXIT_FAILURE;
     }
 
-    printf("[DEBUG] Aguardando resposta do servidor...\n");
     char test_response[64];
     ssize_t test_rec = recvfrom(sockfd, test_response, sizeof(test_response) - 1, 0, NULL, NULL);
     if (test_rec < 0)
     {
         if (errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            printf("[ERROR] ❌ Timeout - servidor não respondeu ao teste de conectividade\n");
+            printf("[ERROR] Timeout - servidor não respondeu ao teste de conectividade\n");
         }
         else
         {
             perror("recvfrom teste de conectividade");
-            printf("[ERROR] ❌ Erro ao receber resposta do servidor\n");
+            printf("[ERROR] Erro ao receber resposta do servidor\n");
         }
-        printf("[DEBUG] Verifique se o servidor está rodando em %s:%d\n", server_ip, server_port);
         close(sockfd);
         return EXIT_FAILURE;
     }
-
     test_response[test_rec] = '\0';
-    printf("[CLIENT] ✅ Conectividade OK - servidor respondeu: %s (%zd bytes)\n", test_response, test_rec);
+    printf("[CLIENT] Conectividade OK - servidor respondeu: %s (%zd bytes)\n", test_response, test_rec);
 
     char filename[64];
     snprintf(filename, sizeof(filename), "raw_data_cliente%d.csv", client_id);

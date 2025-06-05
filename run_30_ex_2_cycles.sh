@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVER_IP="<IP_DO_SEU_WSL>"
+SERVER_IP="10.0.0.12"
 SERVER_PORT=50000
 
 echo "=== Executando 2 ciclos de teste de rampa simultâneo ==="
