@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SERVER_PORT=9090
-CAPTURE_TIME=30
+CAPTURE_TIME=3600*2
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 RAW_LOG="tcpdump_raw_${TIMESTAMP}.log"
 ANALYSIS_LOG="tcpdump_analysis_${TIMESTAMP}.log"
