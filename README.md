@@ -18,29 +18,59 @@ cd Trabalho_Sistemas_Distribuidos_Aspectos_Praticos
 
 ---
 
-## 2. Estrutura de Arquivos
+## 2. Estrutura do Projeto
+
+### Estrutura de Diretórios
+
+```text
+.
+├── client1/              # Diretório para dados do Cliente 1 (gerado dinamicamente)
+├── client2/              # Diretório para dados do Cliente 2 (gerado dinamicamente)  
+├── server/               # Diretório para configurações do servidor
+├── .vscode/              # Configurações do VS Code
+│   └── settings.json     # Associações de arquivos
+├── .gitignore            # Arquivos ignorados pelo Git
+├── LICENSE               # Licença MIT
+└── README.md             # Este arquivo
+```
 
 ### Arquivos Fonte
 
-```
+```text
 server_udp.c              # Servidor UDP echo
 client_udp.c              # Cliente para Experimento 1
 client_udp_ramp.c         # Cliente para Experimento 2
 Makefile                  # Script de compilação
 analyze.py                # Análise estatística avançada
-plot_commands.gnuplot     # Comandos para gerar gráficos básicos
-plot_commands_improved.gnuplot  # Comandos para gráficos detalhados
-run_30_cycles.sh          # Executa 30 ciclos do Experimento 1
-run_client1.sh            # Executa Cliente 1 em loop
-run_client2.sh            # Executa Cliente 2 em loop
-README.md                 # Este arquivo
+plot_commands.gnuplot     # Comandos para gerar gráficos avançados
+analyze_packets.sh        # Análise de captura de pacotes com tcpdump
+```
+
+### Scripts de Execução Automatizada
+
+#### Experimento 1 (RTT vs Tamanho) - 1000 execuções
+
+```text
+run_client1_10.sh         # Cliente 1 - Rede 10 Mbps
+run_client1_100.sh        # Cliente 1 - Rede 100 Mbps
+run_client2_10.sh         # Cliente 2 - Rede 10 Mbps
+run_client2_100.sh        # Cliente 2 - Rede 100 Mbps
+```
+
+#### Experimento 2 (RTT vs Taxa Rampa) - 100 execuções
+
+```text
+run_client1_ramp_10.sh    # Cliente 1 Rampa - Rede 10 Mbps
+run_client1_ramp_100.sh   # Cliente 1 Rampa - Rede 100 Mbps
+run_client2_ramp_10.sh    # Cliente 2 Rampa - Rede 10 Mbps
+run_client2_ramp_100.sh   # Cliente 2 Rampa - Rede 100 Mbps
 ```
 
 ### Arquivos Gerados Após Execução
 
 #### Dados Brutos
 
-```
+```text
 raw_data_cliente1.csv       # Medições brutas - Cliente 1 (Exp. 1)
 raw_data_cliente2.csv       # Medições brutas - Cliente 2 (Exp. 1)
 ramp_data_cliente1.csv      # Medições de rampa - Cliente 1 (Exp. 2)
@@ -49,7 +79,7 @@ ramp_data_cliente2.csv      # Medições de rampa - Cliente 2 (Exp. 2)
 
 #### Estatísticas Processadas
 
-```
+```text
 stats_cliente1.csv          # Estatísticas detalhadas - Cliente 1 (Exp. 1)
 stats_cliente2.csv          # Estatísticas detalhadas - Cliente 2 (Exp. 1)
 stats_ramp_cliente1.csv     # Estatísticas por nível - Cliente 1 (Exp. 2)
@@ -60,23 +90,25 @@ stats_ramp_aggregated_cliente2.csv  # Estatísticas agregadas - Cliente 2
 
 #### Gráficos Gerados
 
-```
-# Gráficos básicos
-rtt_vs_size_cliente1.png    # RTT vs tamanho - Cliente 1
-rtt_vs_size_cliente2.png    # RTT vs tamanho - Cliente 2
-rtt_ramp_vs_level_cliente1.png  # RTT vs nível rampa - Cliente 1
-rtt_ramp_vs_level_cliente2.png  # RTT vs nível rampa - Cliente 2
-
-# Gráficos detalhados (com analyze.py melhorado)
-rtt_vs_size_cliente1_detailed.png   # RTT com IC 98% e percentis
-rtt_vs_size_cliente2_detailed.png   # RTT com IC 98% e percentis
+```text
+# Gráficos detalhados (analyze.py + plot_commands.gnuplot)
+rtt_vs_size_cliente1_detailed.png   # RTT com IC 98% e percentis - Cliente 1
+rtt_vs_size_cliente2_detailed.png   # RTT com IC 98% e percentis - Cliente 2
+rtt_ramp_vs_level_cliente1_detailed.png  # Rampa detalhada - Cliente 1
+rtt_ramp_vs_level_cliente2_detailed.png  # Rampa detalhada - Cliente 2
 loss_rate_vs_size.png               # Taxa de perda vs tamanho
 jitter_vs_size.png                  # Jitter vs tamanho
-rtt_ramp_vs_level_cliente1_detailed.png  # Rampa com percentis
-rtt_ramp_vs_level_cliente2_detailed.png  # Rampa com percentis
 loss_rate_ramp.png                  # Taxa de perda na rampa
 percentiles_comparison.png          # Comparação P95/P99
 outliers_histogram.png              # Histograma de outliers
+```
+
+#### Logs de Análise de Rede
+
+```text
+tcpdump_raw_[timestamp].log         # Captura bruta de pacotes
+tcpdump_analysis_[timestamp].log    # Análise detalhada da captura
+tcpdump_capture_[timestamp].pcap    # Arquivo PCAP para Wireshark
 ```
 
 ---
@@ -90,13 +122,15 @@ outliers_histogram.png              # Histograma de outliers
 
    ```bash
    sudo apt update
-   sudo apt install -y build-essential iproute2 gnuplot-nox python3 python3-pip
+   sudo apt install -y build-essential iproute2 gnuplot-nox python3 python3-pip tcpdump bc
    ```
 
    - `build-essential`: GCC, make e bibliotecas padrão  
    - `iproute2`: utilitário `tc` para simular limitação de banda  
    - `gnuplot-nox`: Gnuplot em modo texto (gera PNG sem interface gráfica)  
    - `python3`: necessário para o script `analyze.py`
+   - `tcpdump`: captura e análise de pacotes de rede
+   - `bc`: calculadora para scripts bash (usado em analyze_packets.sh)
 
 ---
 
@@ -179,14 +213,27 @@ O servidor imprime estatísticas básicas e pode ser interrompido com Ctrl+C.
 
 ## 7. Experimento 1: RTT vs Tamanho de Payload
 
-### 7.1 Execução Automatizada (30 ciclos)
+### 7.1 Execução Automatizada por Rede
+
+#### Rede 10 Mbps (1000 execuções por cliente)
 
 ```bash
-chmod +x run_30_cycles.sh
-./run_30_cycles.sh
+chmod +x run_client1_10.sh run_client2_10.sh
+
+# Em terminais separados
+./run_client1_10.sh &
+./run_client2_10.sh &
 ```
 
-Este script executa 30 ciclos completos com ambos os clientes em paralelo.
+#### Rede 100 Mbps (1000 execuções por cliente)
+
+```bash
+chmod +x run_client1_100.sh run_client2_100.sh
+
+# Em terminais separados  
+./run_client1_100.sh &
+./run_client2_100.sh &
+```
 
 ### 7.2 Execução Manual
 
@@ -194,10 +241,10 @@ Para executar apenas uma vez:
 
 ```bash
 # Cliente 1 (10 Mbps)
-./client_udp 10.0.10.11 10.0.10.12 50000 1
+./client_udp auto 10.0.0.12 9090 1
 
 # Cliente 2 (100 Mbps)
-./client_udp 10.0.100.11 10.0.100.12 50000 2
+./client_udp auto 100.0.0.12 9090 2
 ```
 
 ### 7.3 Parâmetros do Experimento
@@ -218,14 +265,36 @@ Para executar apenas uma vez:
 - **Níveis**: 19 total (10 subida + 9 descida)
 - **Requisições por nível**: 100
 
-### 8.2 Execução
+### 8.2 Execução Automatizada por Rede
+
+#### Rede 10 Mbps (100 execuções por cliente)
+
+```bash
+chmod +x run_client1_ramp_10.sh run_client2_ramp_10.sh
+
+# Em terminais separados
+./run_client1_ramp_10.sh &
+./run_client2_ramp_10.sh &
+```
+
+#### Rede 100 Mbps (100 execuções por cliente)
+
+```bash
+chmod +x run_client1_ramp_100.sh run_client2_ramp_100.sh
+
+# Em terminais separados
+./run_client1_ramp_100.sh &
+./run_client2_ramp_100.sh &
+```
+
+### 8.3 Execução Manual
 
 ```bash
 # Cliente 1 (10 Mbps)
-./client_udp_ramp 10.0.10.11 10.0.10.12 50000 1
+./client_udp_ramp auto 10.0.0.12 9090 1
 
 # Cliente 2 (100 Mbps)
-./client_udp_ramp 10.0.100.11 10.0.100.12 50000 2
+./client_udp_ramp auto 100.0.0.12 9090 2
 ```
 
 ---

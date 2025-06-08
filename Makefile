@@ -30,4 +30,6 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	rm -f raw_data_cliente*.csv stats_cliente*.csv ramp_data_cliente*.csv rtt_vs_size_cliente*.png
+	rm -f raw_data_cliente*.csv stats_cliente*.csv ramp_data_cliente*.csv stats_ramp_cliente*.csv stats_ramp_aggregated_cliente*.csv
+	rm -f rtt_vs_size_cliente*.png loss_rate_vs_size.png jitter_vs_size.png loss_rate_ramp.png percentiles_comparison.png outliers_histogram.png rtt_ramp_vs_level_cliente*.png
+	rm -f tcpdump_raw_*.log tcpdump_analysis_*.log tcpdump_capture_*.pcap
