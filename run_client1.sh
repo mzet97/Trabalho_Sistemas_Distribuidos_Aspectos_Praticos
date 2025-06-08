@@ -3,11 +3,11 @@
 SERVER_IP="10.0.0.12"
 SERVER_PORT=9090
 
-echo "=== Executando 100 instâncias do Cliente 1 ==="
+echo "=== Executando 1000 instâncias do Cliente 1 ==="
 echo "Servidor: $SERVER_IP:$SERVER_PORT"
 
-for i in {1..100}; do
-  echo "Executando instância $i/100 do Cliente 1..."
+for i in {1..1000}; do
+  echo "Executando instância $i/1000 do Cliente 1..."
   
   ./client_udp auto $SERVER_IP $SERVER_PORT 1
   
@@ -16,4 +16,4 @@ for i in {1..100}; do
   fi
 done
 
-echo "Todas as 100 instâncias do Cliente 1 finalizaram."
+echo "Todas as 1000 instâncias do Cliente 1 finalizaram."
