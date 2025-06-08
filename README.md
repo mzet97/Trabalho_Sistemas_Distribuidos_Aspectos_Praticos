@@ -20,39 +20,63 @@ cd Trabalho_Sistemas_Distribuidos_Aspectos_Praticos
 
 ## 2. Estrutura de Arquivos
 
-Na raiz do repositório, você deve encontrar:
+### Arquivos Fonte
 
 ```
-server_udp.c
-client_udp.c
-client_udp_ramp.c
-Makefile
-analyze.py
-plot_commands.gnuplot
-run_30_cycles.sh
-run_client1.sh
-run_client2.sh
-README.md  (este arquivo)
+server_udp.c              # Servidor UDP echo
+client_udp.c              # Cliente para Experimento 1
+client_udp_ramp.c         # Cliente para Experimento 2
+Makefile                  # Script de compilação
+analyze.py                # Análise estatística avançada
+plot_commands.gnuplot     # Comandos para gerar gráficos básicos
+plot_commands_improved.gnuplot  # Comandos para gráficos detalhados
+run_30_cycles.sh          # Executa 30 ciclos do Experimento 1
+run_client1.sh            # Executa Cliente 1 em loop
+run_client2.sh            # Executa Cliente 2 em loop
+README.md                 # Este arquivo
 ```
 
-Após compilação e execução, serão gerados (na raiz):
+### Arquivos Gerados Após Execução
+
+#### Dados Brutos
 
 ```
-server_udp                  (executável do servidor)
-client_udp                  (executável do cliente – Exp. 1)
-client_udp_ramp             (executável do cliente – Exp. 2)
-raw_data_cliente1.csv       (dados brutos – Exp. 1, Cliente 1)
-raw_data_cliente2.csv       (dados brutos – Exp. 1, Cliente 2)
-ramp_data_cliente1.csv      (dados de rampa – Exp. 2, Cliente 1)
-ramp_data_cliente2.csv      (dados de rampa – Exp. 2, Cliente 2)
-stats_cliente1.csv          (estatísticas do Exp. 1, Cliente 1)
-stats_cliente2.csv          (estatísticas do Exp. 1, Cliente 2)
-stats_ramp_cliente1.csv     (estatísticas do Exp. 2, Cliente 1)
-stats_ramp_cliente2.csv     (estatísticas do Exp. 2, Cliente 2)
-rtt_vs_size_cliente1.png    (gráfico RTT vs tamanho – Cliente 1)
-rtt_vs_size_cliente2.png    (gráfico RTT vs tamanho – Cliente 2)
-rtt_ramp_vs_level_cliente1.png  (gráfico RTT vs nível de rampa – Cliente 1)
-rtt_ramp_vs_level_cliente2.png  (gráfico RTT vs nível de rampa – Cliente 2)
+raw_data_cliente1.csv       # Medições brutas - Cliente 1 (Exp. 1)
+raw_data_cliente2.csv       # Medições brutas - Cliente 2 (Exp. 1)
+ramp_data_cliente1.csv      # Medições de rampa - Cliente 1 (Exp. 2)
+ramp_data_cliente2.csv      # Medições de rampa - Cliente 2 (Exp. 2)
+```
+
+#### Estatísticas Processadas
+
+```
+stats_cliente1.csv          # Estatísticas detalhadas - Cliente 1 (Exp. 1)
+stats_cliente2.csv          # Estatísticas detalhadas - Cliente 2 (Exp. 1)
+stats_ramp_cliente1.csv     # Estatísticas por nível - Cliente 1 (Exp. 2)
+stats_ramp_cliente2.csv     # Estatísticas por nível - Cliente 2 (Exp. 2)
+stats_ramp_aggregated_cliente1.csv  # Estatísticas agregadas - Cliente 1
+stats_ramp_aggregated_cliente2.csv  # Estatísticas agregadas - Cliente 2
+```
+
+#### Gráficos Gerados
+
+```
+# Gráficos básicos
+rtt_vs_size_cliente1.png    # RTT vs tamanho - Cliente 1
+rtt_vs_size_cliente2.png    # RTT vs tamanho - Cliente 2
+rtt_ramp_vs_level_cliente1.png  # RTT vs nível rampa - Cliente 1
+rtt_ramp_vs_level_cliente2.png  # RTT vs nível rampa - Cliente 2
+
+# Gráficos detalhados (com analyze.py melhorado)
+rtt_vs_size_cliente1_detailed.png   # RTT com IC 98% e percentis
+rtt_vs_size_cliente2_detailed.png   # RTT com IC 98% e percentis
+loss_rate_vs_size.png               # Taxa de perda vs tamanho
+jitter_vs_size.png                  # Jitter vs tamanho
+rtt_ramp_vs_level_cliente1_detailed.png  # Rampa com percentis
+rtt_ramp_vs_level_cliente2_detailed.png  # Rampa com percentis
+loss_rate_ramp.png                  # Taxa de perda na rampa
+percentiles_comparison.png          # Comparação P95/P99
+outliers_histogram.png              # Histograma de outliers
 ```
 
 ---
@@ -90,14 +114,6 @@ Isso vai gerar os seguintes executáveis:
 - `client_udp` → cliente para Experimento 1 (RTT × tamanho)  
 - `client_udp_ramp` → cliente para Experimento 2 (RTT × taxa de rampa)
 
-Ou, para compilar individualmente:
-
-```bash
-make server_udp
-make client_udp
-make client_udp_ramp
-```
-
 Para remover somente os executáveis:
 
 ```bash
@@ -112,234 +128,266 @@ make distclean
 
 ---
 
+## 5. Configuração de Rede (Simulação de Banda)
+
+### 5.1 Verificando Interfaces Disponíveis
+
+```bash
+ip addr show
+```
+
+### 5.2 Configurando Limitação de Banda (opcional)
+
+Para simular redes de 10 Mbps e 100 Mbps usando `tc`:
+
+```bash
+# Interface 1 - 10 Mbps
+sudo tc qdisc add dev eth0 root tbf rate 10mbit burst 32kbit latency 40ms
+
+# Interface 2 - 100 Mbps  
+sudo tc qdisc add dev eth1 root tbf rate 100mbit burst 32kbit latency 40ms
+```
+
+Para remover as limitações:
+
+```bash
+sudo tc qdisc del dev eth0 root
+sudo tc qdisc del dev eth1 root
+```
+
+---
+
 ## 6. Executando o Servidor
 
-Abra duas abas/janelas no Ubuntu/WSL:
+Abra duas abas/janelas no terminal:
 
-1. **Aba 1 (rede 10 Mb/s / eth1)**  
+1. **Aba 1 (rede 10 Mb/s)**  
 
    ```bash
    ./server_udp 10.0.10.12 50000
    ```
 
-   - Faz bind em `10.0.10.12:50000`.
-
-2. **Aba 2 (rede 100 Mb/s / eth2)**  
+2. **Aba 2 (rede 100 Mb/s)**  
 
    ```bash
    ./server_udp 10.0.100.12 50000
    ```
 
-   - Faz bind em `10.0.100.12:50000`.
-
-Cada instância do servidor executa:
-
-```c
-while (1) {
-    recvfrom(...);
-    sendto(...);
-}
-```
+O servidor imprime estatísticas básicas e pode ser interrompido com Ctrl+C.
 
 ---
 
 ## 7. Experimento 1: RTT vs Tamanho de Payload
 
-### 7.1 Uso do Script de 30 Ciclos
-
-Na raiz do projeto, torne executável:
+### 7.1 Execução Automatizada (30 ciclos)
 
 ```bash
 chmod +x run_30_cycles.sh
-```
-
-Em seguida, execute:
-
-```bash
 ./run_30_cycles.sh
 ```
 
-Esse script repete 30 ciclos de:
+Este script executa 30 ciclos completos com ambos os clientes em paralelo.
 
-1. **Cliente 1** (bind local em `10.0.10.11`, envia para `10.0.10.12:50000`) em background  
-2. **Cliente 2** (bind local em `10.0.100.11`, envia para `10.0.100.12:50000`) em background  
-3. `wait` para aguardar ambos terminarem, e então inicia o próximo ciclo
+### 7.2 Execução Manual
 
-Após cada execução, os clientes gravam/concatenam em:
-
-- `raw_data_cliente1.csv`  
-- `raw_data_cliente2.csv`
-
-Cada arquivo terá, ao final, aproximadamente:  
-
-```
-30 ciclos × 16 tamanhos × 1000 medidas ≃ 480000 linhas + cabeçalho
-```
-
-### 7.2 Execução Alternativa em Parâmetros
-
-Para rodar apenas o Cliente 1 ou apenas o Cliente 2 simultaneamente:
+Para executar apenas uma vez:
 
 ```bash
-chmod +x run_client1.sh run_client2.sh
+# Cliente 1 (10 Mbps)
+./client_udp 10.0.10.11 10.0.10.12 50000 1
 
-# Em um terminal:
-./run_client1.sh   # 30 instâncias do Cliente 1 em background
-
-# Em outro terminal:
-./run_client2.sh   # 30 instâncias do Cliente 2 em background
+# Cliente 2 (100 Mbps)
+./client_udp 10.0.100.11 10.0.100.12 50000 2
 ```
+
+### 7.3 Parâmetros do Experimento
+
+- **Tamanhos testados**: 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65507 bytes
+- **Medições por tamanho**: 1000
+- **Warmup**: 50 pacotes
+- **Timeout**: 10 segundos
 
 ---
 
 ## 8. Experimento 2: RTT vs Taxa de Requisições (Rampa)
 
-### 8.1 Descrição do Experimento
+### 8.1 Descrição da Rampa
 
-O cliente de rampa (`client_udp_ramp.c`) varia a taxa de envio de requisições conforme:
-
-- **Taxa mínima (nível 1)**: 10 req/s → intervalo = 100000 µs  
-- **Taxa máxima (nível 10)**: 100 req/s → intervalo = 10000 µs  
-- **Níveis totais**: 10 na subida + 9 na descida = 19 níveis  
+- **Taxa mínima**: 10 req/s (nível 1)
+- **Taxa máxima**: 100 req/s (nível 10)  
+- **Níveis**: 19 total (10 subida + 9 descida)
 - **Requisições por nível**: 100
 
-Para cada tamanho de payload, o cliente:
-
-1. Começa em 10 req/s e envia 100 pacotes;  
-2. Aumenta a taxa até 100 req/s em 10 passos, enviando 100 pacotes em cada passo;  
-3. Então diminui de volta a 10 req/s em 9 passos, 100 pacotes por passo;  
-4. Registra o RTT de cada pacote em CSV.
-
-### 8.2 Executando o Cliente de Rampa
-
-Em terminais separados:
+### 8.2 Execução
 
 ```bash
-# Cliente 1 (rede 10 Mb/s):
+# Cliente 1 (10 Mbps)
 ./client_udp_ramp 10.0.10.11 10.0.10.12 50000 1
 
-# Cliente 2 (rede 100 Mb/s):
+# Cliente 2 (100 Mbps)
 ./client_udp_ramp 10.0.100.11 10.0.100.12 50000 2
-```
-
-Os dados serão gravados (append) em:
-
-- `ramp_data_cliente1.csv`  
-- `ramp_data_cliente2.csv`
-
-Formato de cada linha:
-
-```
-tamanho_bytes,nivel,iteracao_no_nivel,rtt_ms
 ```
 
 ---
 
-## 9. Processando Dados Brutos em Estatísticas
+## 9. Análise Estatística Avançada
 
-Após completar os experimentos e preencher todos os arquivos:
+### 9.1 Processamento dos Dados
 
-- `raw_data_cliente1.csv`  
-- `raw_data_cliente2.csv`  
-- `ramp_data_cliente1.csv`  
-- `ramp_data_cliente2.csv`
-
-execute:
+Após completar os experimentos:
 
 ```bash
 python3 analyze.py
 ```
 
-Isso gerará, na raiz:
+### 9.2 Estatísticas Calculadas
 
-```
-stats_cliente1.csv         (dados do Exp. 1)
-stats_cliente2.csv
-stats_ramp_cliente1.csv    (dados do Exp. 2)
-stats_ramp_cliente2.csv
-```
+O script `analyze.py` calcula:
 
-### 9.1 Formato de `stats_clienteX.csv`
+- **Medidas básicas**: média, mediana, desvio padrão
+- **Intervalo de confiança**: 98% (Z = 2.3263)
+- **Percentis**: P95 e P99
+- **Jitter**: variação média entre RTTs consecutivos
+- **Taxa de perda**: porcentagem de timeouts
+- **Detecção de outliers**: método IQR
+- **Nível de saturação**: ponto onde RTT aumenta >50%
 
-```
-tamanho_bytes,n_validos,media_ms,mediana_ms,dp_ms,jitter_ms,ic_lower_ms,ic_upper_ms
-```
+### 9.3 Arquivos de Saída
 
-- Agrupado somente por `tamanho_bytes`.
+#### Para Experimento 1
 
-### 9.2 Formato de `stats_ramp_clienteX.csv`
+- `stats_cliente[1-2].csv`: 14 colunas com estatísticas completas
 
-```
-tamanho_bytes,nivel,n_validos,media_ms,mediana_ms,dp_ms,jitter_ms,ic_lower_ms,ic_upper_ms
-```
+#### Para Experimento 2
 
-- Agrupado por `(tamanho_bytes, nivel)`.
+- `stats_ramp_cliente[1-2].csv`: estatísticas por (tamanho, nível)
+- `stats_ramp_aggregated_cliente[1-2].csv`: agregado por tamanho
+
+### 9.4 Relatório Resumido
+
+O script gera automaticamente um relatório no terminal com:
+
+- RTT mínimo/máximo global
+- Taxa de perda média
+- Tamanho com maior variabilidade
+- Níveis de saturação detectados
+- Estatísticas de percentis
 
 ---
 
-## 10. Gerando Gráficos com Gnuplot
+## 10. Geração de Gráficos
 
-Certifique-se de que `plot_commands.gnuplot` contenha:
-
-```gnuplot
-set datafile separator ","
-set terminal pngcairo size 1024,768 enhanced font "Arial,10"
-set grid
-
-set output "rtt_vs_size_cliente1.png"
-set title "RTT Médio vs Tamanho de Payload — Cliente 1"
-set xlabel "Tamanho do Payload (bytes)"
-set ylabel "RTT (ms)"
-plot   "stats_cliente1.csv" skip 1 using 1:3 with linespoints lt rgb "blue"  lw 2 pt 7 title "Média",   ""                     skip 1 using 1:3:5 with yerrorbars lt rgb "red"   lw 1 title "Desvio Padrão"
-
-set output "rtt_vs_size_cliente2.png"
-set title "RTT Médio vs Tamanho de Payload — Cliente 2"
-set xlabel "Tamanho do Payload (bytes)"
-set ylabel "RTT (ms)"
-plot   "stats_cliente2.csv" skip 1 using 1:3 with linespoints lt rgb "green"  lw 2 pt 7 title "Média",   ""                     skip 1 using 1:3:5 with yerrorbars lt rgb "magenta" lw 1 title "Desvio Padrão"
-
-set output "rtt_ramp_vs_level_cliente1.png"
-set title "RTT Médio vs Nível (Rampa) — Cliente 1"
-set xlabel "Nível da Rampa"
-set ylabel "RTT (ms)"
-plot   "stats_ramp_cliente1.csv" skip 1 using 2:4 with linespoints lt rgb "blue"  lw 2 pt 7 title "Média",   ""                         skip 1 using 2:4:6 with yerrorbars lt rgb "red"   lw 1 title "Desvio Padrão"
-
-set output "rtt_ramp_vs_level_cliente2.png"
-set title "RTT Médio vs Nível (Rampa) — Cliente 2"
-set xlabel "Nível da Rampa"
-set ylabel "RTT (ms)"
-plot   "stats_ramp_cliente2.csv" skip 1 using 2:4 with linespoints lt rgb "green"  lw 2 pt 7 title "Média",   ""                         skip 1 using 2:4:6 with yerrorbars lt rgb "magenta" lw 1 title "Desvio Padrão"
-```
-
-Para gerar todos os PNGs, execute:
+### 10.1 Gráficos Básicos
 
 ```bash
 gnuplot plot_commands.gnuplot
 ```
 
-Isso criará na raiz:
+Gera 4 gráficos básicos com média e desvio padrão.
 
+### 10.2 Gráficos Detalhados
+
+```bash
+gnuplot plot_commands_improved.gnuplot
 ```
-rtt_vs_size_cliente1.png
-rtt_vs_size_cliente2.png
-rtt_ramp_vs_level_cliente1.png
-rtt_ramp_vs_level_cliente2.png
-```
+
+Gera 8+ gráficos incluindo:
+
+- RTT com intervalo de confiança 98%
+- Percentis P95 e P99
+- Taxa de perda vs tamanho
+- Jitter vs tamanho
+- Comparações entre clientes
+- Análise de saturação na rampa
 
 ---
 
-## 12. Interpretação dos Resultados
+## 11. Interpretação dos Resultados
 
-### 12.1 Experimento 1 – RTT vs Tamanho
+### 11.1 Experimento 1 - RTT vs Tamanho
 
-- Analise como o RTT varia com o tamanho do payload.  
-- Compare comportamento em 10 Mb/s versus 100 Mb/s.  
-- Observe o efeito de pacotes próximos ao limite UDP (65507 bytes).
+**O que observar:**
 
-### 12.2 Experimento 2 – RTT vs Taxa de Rampa
+- Crescimento do RTT com tamanho do payload
+- Diferença entre redes 10 Mbps e 100 Mbps
+- Impacto da fragmentação (>1500 bytes)
+- Variabilidade (jitter) em diferentes tamanhos
 
-- Identifique a saturação da rede conforme a taxa aumenta.  
-- Observe como o RTT se degrada em taxas cada vez mais altas.  
-- Compare novamente 10 Mb/s versus 100 Mb/s.
+**Métricas importantes:**
+
+- RTT médio e mediana (robustez a outliers)
+- P95/P99 (cauda de latência)
+- Taxa de perda (confiabilidade)
+
+### 11.2 Experimento 2 - RTT vs Taxa
+
+**O que observar:**
+
+- Ponto de saturação da rede
+- Degradação do RTT com aumento da taxa
+- Diferença de capacidade entre 10/100 Mbps
+- Comportamento na subida vs descida da rampa
+
+**Análise de saturação:**
+
+- Nível onde RTT aumenta >50% do baseline
+- Taxa correspondente em req/s
+- Comparação entre tamanhos de payload
+
+---
+
+## 12. Solução de Problemas
+
+### 12.1 Timeouts Excessivos
+
+```bash
+# Verificar conectividade
+ping -c 5 10.0.10.12
+ping -c 5 10.0.100.12
+
+# Testar servidor manualmente
+echo "TEST" | nc -u 10.0.10.12 50000
+```
+
+### 12.2 Erro de Bind
+
+- Verificar se IPs estão corretos: `ip addr show`
+- Usar `auto` para bind automático
+- Verificar permissões (pode precisar sudo)
+
+### 12.3 Arquivos CSV Vazios
+
+- Verificar se servidor está rodando
+- Conferir logs de erro dos clientes
+- Validar parâmetros de linha de comando
+
+---
+
+## 13. Estrutura dos CSVs
+
+### 13.1 raw_data_cliente[1-2].csv
+
+```csv
+tamanho_bytes,iteracao,rtt_ms
+2,1,0.12345
+2,2,-1.00000  # timeout
+...
+```
+
+### 13.2 stats_cliente[1-2].csv
+
+```csv
+tamanho_bytes,n_validos,media_ms,mediana_ms,dp_ms,jitter_ms,ic_lower_ms,ic_upper_ms,p95_ms,p99_ms,min_ms,max_ms,taxa_perda_%,num_outliers
+2,995,0.15234,0.14523,0.02341,0.01234,0.14123,0.16345,0.19234,0.21345,0.10234,0.25432,0.50,3
+...
+```
+
+### 13.3 stats_ramp_aggregated_cliente[1-2].csv
+
+```csv
+tamanho_bytes,n_total,media_ms,mediana_ms,dp_ms,jitter_ms,p95_ms,p99_ms,min_ms,max_ms,taxa_perda_%,nivel_saturacao
+2,1850,0.25432,0.23421,0.05432,0.03421,0.35432,0.42345,0.15432,0.52341,7.89,15
+...
+```
 
 ---
