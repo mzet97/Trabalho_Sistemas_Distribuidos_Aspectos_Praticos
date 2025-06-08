@@ -9,7 +9,7 @@ echo "Servidor: $SERVER_IP:$SERVER_PORT"
 for i in {1..1000}; do
   echo "Executando instância $i/1000 do Cliente 1..."
   
-  ./client_udp auto $SERVER_IP $SERVER_PORT 1
+  ./client_udp auto $SERVER_IP $SERVER_PORT 1 &
   
   if [ $? -ne 0 ]; then
     echo "Erro na instância $i do Cliente 1"
