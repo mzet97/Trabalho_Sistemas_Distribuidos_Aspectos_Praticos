@@ -11,61 +11,115 @@ EXPECTED_MEASURES_PER_LEVEL = 100
 
 def read_raw_data(filepath):
     """
-    Lê raw_data_clienteX.csv e retorna dicionário:
+    Lê raw_data_clienteX.csv ou raw_data_clienteX_100.csv e retorna dicionário:
       { tamanho_bytes: [rtt1, rtt2, ...] }
     Descartamos rtt < 0 (timeouts).
     """
     data = {}
     total_per_size = {}
     
-    with open(filepath, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            size = int(row["tamanho_bytes"])
-            total_per_size[size] = total_per_size.get(size, 0) + 1
+    if not os.path.exists(filepath):
+        print(f"[WARN] Arquivo não encontrado: {filepath}")
+        return data, total_per_size
+    
+    try:
+        line_count = 0
+        valid_count = 0
+        invalid_count = 0
+        
+        with open(filepath, newline="") as f:
+            reader = csv.DictReader(f)
             
-            try:
-                rtt = float(row["rtt_ms"])
-            except ValueError:
-                continue
-            if rtt < 0:
-                continue
-            data.setdefault(size, []).append(rtt)
+            if reader.fieldnames:
+                print(f"[DEBUG] Colunas encontradas: {reader.fieldnames}")
+            
+            for row in reader:
+                line_count += 1
+                
+                if "tamanho_bytes" not in row or "rtt_ms" not in row:
+                    invalid_count += 1
+                    continue
+                    
+                try:
+                    size = int(row["tamanho_bytes"])
+                except (ValueError, TypeError):
+                    invalid_count += 1
+                    continue
+                    
+                total_per_size[size] = total_per_size.get(size, 0) + 1
+                
+                rtt_value = row.get("rtt_ms")
+                if rtt_value is None or rtt_value == "":
+                    invalid_count += 1
+                    continue
+                    
+                try:
+                    rtt = float(rtt_value)
+                except (ValueError, TypeError):
+                    invalid_count += 1
+                    continue
+                    
+                if rtt < 0:
+                    continue
+                    
+                data.setdefault(size, []).append(rtt)
+                valid_count += 1
+        
+        print(f"[INFO] {filepath}: {line_count} linhas lidas, {valid_count} RTTs válidos, {invalid_count} linhas inválidas")
+        
+    except Exception as e:
+        print(f"[ERROR] Erro ao processar {filepath}: {e}")
     
     return data, total_per_size
 
 def read_ramp_data(filepath):
     """
-    Lê ramp_data_clienteX.csv e retorna dicionário:
+    Lê ramp_data_clienteX.csv ou ramp_data_clienteX_100.csv e retorna dicionário:
       { (tamanho_bytes, nivel): [rtt1, rtt2, ...] }
-    Descartamos rtt < 0 (timeouts).
     """
     data = {}
     total_per_key = {}
     
-    with open(filepath, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            size = int(row["tamanho_bytes"])
-            nivel = int(row["nivel"])
-            key = (size, nivel)
-            total_per_key[key] = total_per_key.get(key, 0) + 1
-            
-            try:
-                rtt = float(row["rtt_ms"])
-            except ValueError:
-                continue
-            if rtt < 0:
-                continue
-            data.setdefault(key, []).append(rtt)
+    if not os.path.exists(filepath):
+        print(f"[WARN] Arquivo não encontrado: {filepath}")
+        return data, total_per_key
+    
+    try:
+        with open(filepath, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if "tamanho_bytes" not in row or "nivel" not in row or "rtt_ms" not in row:
+                    continue
+                    
+                try:
+                    size = int(row["tamanho_bytes"])
+                    nivel = int(row["nivel"])
+                except (ValueError, TypeError):
+                    continue
+                    
+                key = (size, nivel)
+                total_per_key[key] = total_per_key.get(key, 0) + 1
+                
+                rtt_value = row.get("rtt_ms")
+                if rtt_value is None or rtt_value == "":
+                    continue
+                    
+                try:
+                    rtt = float(rtt_value)
+                except (ValueError, TypeError):
+                    continue
+                    
+                if rtt < 0:
+                    continue
+                    
+                data.setdefault(key, []).append(rtt)
+    except Exception as e:
+        print(f"[ERROR] Erro ao processar {filepath}: {e}")
     
     return data, total_per_key
 
 def detect_outliers(rtts):
-    """
-    Detecta outliers usando método IQR (Interquartile Range).
-    Retorna número de outliers e lista dos valores outliers.
-    """
+    """Detecta outliers usando método IQR."""
     if len(rtts) < 4:
         return 0, []
     
@@ -99,9 +153,7 @@ def compute_percentile(sorted_data, percentile):
 
 def compute_stats(rtts, total_attempts=None):
     """
-    Recebe lista de RTTs (float) e retorna uma tupla expandida com:
-    (n, media, mediana, dp, jitter, ic_lower, ic_upper, p95, p99, 
-     min_rtt, max_rtt, taxa_perda, num_outliers)
+    Calcula estatísticas completas incluindo média, mediana, percentis, etc.
     """
     n = len(rtts)
     if n == 0:
@@ -140,102 +192,91 @@ def compute_stats(rtts, total_attempts=None):
     return (n, media, mediana, dp, jitter, ic_low, ic_up, 
             p95, p99, min_rtt, max_rtt, taxa_perda, num_outliers)
 
-def aggregate_ramp_by_size(ramp_data, total_data):
+def process_raw_files_by_network(network_speed):
     """
-    Agrega dados de rampa por tamanho, ignorando níveis.
-    Útil para ver o comportamento geral por tamanho.
+    Processa arquivos raw_data para uma velocidade de rede específica.
+    network_speed: "10" ou "100"
     """
-    by_size = {}
-    total_by_size = {}
+    suffix = "_100" if network_speed == "100" else ""
+    pattern = f"raw_data_cliente*{suffix}.csv"
+    raw_files = glob.glob(pattern)
     
-    for (size, nivel), rtts in ramp_data.items():
-        by_size.setdefault(size, []).extend(rtts)
-        total_by_size[size] = total_by_size.get(size, 0) + total_data.get((size, nivel), 0)
+    if not raw_files:
+        print(f"[INFO] Nenhum arquivo {pattern} encontrado para rede de {network_speed} Mbps.")
+        return False
     
-    return by_size, total_by_size
-
-def find_saturation_level(ramp_data, size_bytes):
-    """
-    Identifica o nível onde ocorre saturação (aumento significativo no RTT).
-    Retorna o nível de saturação ou None se não detectado.
-    """
-    levels = []
-    mean_rtts = []
+    print(f"\n[INFO] Processando {len(raw_files)} arquivo(s) para rede de {network_speed} Mbps...")
     
-    for nivel in range(1, 20):
-        key = (size_bytes, nivel)
-        if key in ramp_data and len(ramp_data[key]) > 0:
-            mean_rtt = statistics.mean(ramp_data[key])
-            levels.append(nivel)
-            mean_rtts.append(mean_rtt)
-    
-    if len(levels) < 3:
-        return None
-    
-    baseline = mean_rtts[0]
-    for i, (nivel, mean_rtt) in enumerate(zip(levels, mean_rtts)):
-        if mean_rtt > baseline * 1.5:
-            return nivel
-    
-    return None
-
-def process_raw_files():
-    """
-    Para cada raw_data_clienteX.csv, gera stats_clienteX.csv
-    por tamanho de payload com estatísticas expandidas.
-    """
-    for raw_path in glob.glob("raw_data_cliente*.csv"):
+    for raw_path in sorted(raw_files):
+        print(f"\n[ANALYZE] Processando: {raw_path}")
+        
         base = os.path.basename(raw_path).replace("raw_data_", "").replace(".csv", "")
         out_path = f"stats_{base}.csv"
 
         data, total_per_size = read_raw_data(raw_path)
-        sizes = sorted(data.keys())
-
-        with open(out_path, "w", newline="") as fout:
-            writer = csv.writer(fout)
-            writer.writerow([
-                "tamanho_bytes", "n_validos", "media_ms",
-                "mediana_ms", "dp_ms", "jitter_ms",
-                "ic_lower_ms", "ic_upper_ms", "p95_ms", "p99_ms",
-                "min_ms", "max_ms", "taxa_perda_%", "num_outliers"
-            ])
+        
+        if not data:
+            print(f"[WARN] Nenhum dado válido encontrado em {raw_path}")
+            continue
             
-            for size in sizes:
-                rtts = data[size]
-                total_attempts = total_per_size.get(size, EXPECTED_MEASURES)
-                stats = compute_stats(rtts, total_attempts)
-                
+        sizes = sorted(data.keys())
+        print(f"[INFO] Encontrados {len(sizes)} tamanhos diferentes com dados válidos")
+
+        try:
+            with open(out_path, "w", newline="") as fout:
+                writer = csv.writer(fout)
                 writer.writerow([
-                    size,
-                    stats[0],  # n_validos
-                    f"{stats[1]:.5f}",  # media
-                    f"{stats[2]:.5f}",  # mediana
-                    f"{stats[3]:.5f}",  # dp
-                    f"{stats[4]:.5f}",  # jitter
-                    f"{stats[5]:.5f}",  # ic_lower
-                    f"{stats[6]:.5f}",  # ic_upper
-                    f"{stats[7]:.5f}",  # p95
-                    f"{stats[8]:.5f}",  # p99
-                    f"{stats[9]:.5f}",  # min
-                    f"{stats[10]:.5f}",  # max
-                    f"{stats[11]:.2f}",  # taxa_perda
-                    stats[12]  # num_outliers
+                    "tamanho_bytes", "n_validos", "media_ms",
+                    "mediana_ms", "dp_ms", "jitter_ms",
+                    "ic_lower_ms", "ic_upper_ms", "p95_ms", "p99_ms",
+                    "min_ms", "max_ms", "taxa_perda_%", "num_outliers"
                 ])
+                
+                for size in sizes:
+                    rtts = data[size]
+                    total_attempts = total_per_size.get(size, EXPECTED_MEASURES)
+                    stats = compute_stats(rtts, total_attempts)
+                    
+                    writer.writerow([
+                        size,
+                        stats[0], f"{stats[1]:.5f}", f"{stats[2]:.5f}",
+                        f"{stats[3]:.5f}", f"{stats[4]:.5f}", f"{stats[5]:.5f}",
+                        f"{stats[6]:.5f}", f"{stats[7]:.5f}", f"{stats[8]:.5f}",
+                        f"{stats[9]:.5f}", f"{stats[10]:.5f}", f"{stats[11]:.2f}",
+                        stats[12]
+                    ])
+                
+                print(f"[SUCCESS] Estatísticas gravadas em {out_path}")
+                
+        except Exception as e:
+            print(f"[ERROR] Erro ao escrever {out_path}: {e}")
+    
+    return True
 
-        print(f"[ANALYZE] Estatísticas (raw) gravadas em {out_path}")
-
-def process_ramp_files():
+def process_ramp_files_by_network(network_speed):
     """
-    Para cada ramp_data_clienteX.csv, gera:
-    1. stats_ramp_clienteX.csv - por (tamanho_bytes, nivel)
-    2. stats_ramp_aggregated_clienteX.csv - agregado por tamanho
+    Processa arquivos ramp_data para uma velocidade de rede específica.
     """
-    for ramp_path in glob.glob("ramp_data_cliente*.csv"):
+    suffix = "_100" if network_speed == "100" else ""
+    pattern = f"ramp_data_cliente*{suffix}.csv"
+    ramp_files = glob.glob(pattern)
+    
+    if not ramp_files:
+        print(f"[INFO] Nenhum arquivo {pattern} encontrado para rede de {network_speed} Mbps.")
+        return False
+    
+    print(f"\n[INFO] Processando {len(ramp_files)} arquivo(s) de rampa para rede de {network_speed} Mbps...")
+    
+    for ramp_path in sorted(ramp_files):
         base = os.path.basename(ramp_path).replace("ramp_data_", "").replace(".csv", "")
         out_path = f"stats_ramp_{base}.csv"
-        out_path_agg = f"stats_ramp_aggregated_{base}.csv"
 
         data, total_per_key = read_ramp_data(ramp_path)
+        
+        if not data:
+            print(f"[WARN] Nenhum dado válido encontrado em {ramp_path}")
+            continue
+            
         keys = sorted(data.keys(), key=lambda x: (x[0], x[1]))
 
         with open(out_path, "w", newline="") as fout:
@@ -255,146 +296,211 @@ def process_ramp_files():
                 
                 writer.writerow([
                     size, nivel,
-                    stats[0],  # n_validos
-                    f"{stats[1]:.5f}",  # media
-                    f"{stats[2]:.5f}",  # mediana
-                    f"{stats[3]:.5f}",  # dp
-                    f"{stats[4]:.5f}",  # jitter
-                    f"{stats[5]:.5f}",  # ic_lower
-                    f"{stats[6]:.5f}",  # ic_upper
-                    f"{stats[7]:.5f}",  # p95
-                    f"{stats[8]:.5f}",  # p99
-                    f"{stats[9]:.5f}",  # min
-                    f"{stats[10]:.5f}",  # max
-                    f"{stats[11]:.2f}",  # taxa_perda
-                    stats[12]  # num_outliers
+                    stats[0], f"{stats[1]:.5f}", f"{stats[2]:.5f}",
+                    f"{stats[3]:.5f}", f"{stats[4]:.5f}", f"{stats[5]:.5f}",
+                    f"{stats[6]:.5f}", f"{stats[7]:.5f}", f"{stats[8]:.5f}",
+                    f"{stats[9]:.5f}", f"{stats[10]:.5f}", f"{stats[11]:.2f}",
+                    stats[12]
                 ])
 
-        print(f"[ANALYZE] Estatísticas (rampa) gravadas em {out_path}")
-        
-        agg_data, agg_total = aggregate_ramp_by_size(data, total_per_key)
-        sizes = sorted(agg_data.keys())
-        
-        with open(out_path_agg, "w", newline="") as fout:
-            writer = csv.writer(fout)
-            writer.writerow([
-                "tamanho_bytes", "n_total", "media_ms",
-                "mediana_ms", "dp_ms", "jitter_ms",
-                "p95_ms", "p99_ms", "min_ms", "max_ms",
-                "taxa_perda_%", "nivel_saturacao"
-            ])
-            
-            for size in sizes:
-                rtts = agg_data[size]
-                total_attempts = agg_total.get(size, EXPECTED_MEASURES_PER_LEVEL * 19)
-                stats = compute_stats(rtts, total_attempts)
-                saturation_level = find_saturation_level(data, size)
+        print(f"[SUCCESS] Estatísticas de rampa gravadas em {out_path}")
+    
+    return True
+
+def aggregate_clients_by_network(network_speed):
+    """
+    Agrega dados de ambos os clientes para uma rede específica.
+    """
+    suffix = "_100" if network_speed == "100" else ""
+    stats_files = glob.glob(f"stats_cliente*{suffix}.csv")
+    
+    if len(stats_files) != 2:
+        return False
+    
+    out_path = f"stats_network_{network_speed}mbps.csv"
+    
+    all_data = {}
+    
+    for stats_file in stats_files:
+        with open(stats_file, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                size = int(row["tamanho_bytes"])
+                if size not in all_data:
+                    all_data[size] = {
+                        'media': [], 'mediana': [], 'p95': [], 'p99': [],
+                        'jitter': [], 'taxa_perda': [], 'n_total': 0
+                    }
                 
-                writer.writerow([
-                    size,
-                    stats[0],  # n_total
-                    f"{stats[1]:.5f}",  # media
-                    f"{stats[2]:.5f}",  # mediana
-                    f"{stats[3]:.5f}",  # dp
-                    f"{stats[4]:.5f}",  # jitter
-                    f"{stats[7]:.5f}",  # p95
-                    f"{stats[8]:.5f}",  # p99
-                    f"{stats[9]:.5f}",  # min
-                    f"{stats[10]:.5f}",  # max
-                    f"{stats[11]:.2f}",  # taxa_perda
-                    saturation_level if saturation_level else "N/A"
-                ])
+                all_data[size]['media'].append(float(row["media_ms"]))
+                all_data[size]['mediana'].append(float(row["mediana_ms"]))
+                all_data[size]['p95'].append(float(row["p95_ms"]))
+                all_data[size]['p99'].append(float(row["p99_ms"]))
+                all_data[size]['jitter'].append(float(row["jitter_ms"]))
+                all_data[size]['taxa_perda'].append(float(row["taxa_perda_%"]))
+                all_data[size]['n_total'] += int(row["n_validos"])
+    
+    with open(out_path, "w", newline="") as fout:
+        writer = csv.writer(fout)
+        writer.writerow([
+            "tamanho_bytes", "media_agregada_ms", "mediana_agregada_ms",
+            "p95_agregado_ms", "p99_agregado_ms", "jitter_agregado_ms",
+            "taxa_perda_agregada_%", "n_total_amostras"
+        ])
         
-        print(f"[ANALYZE] Estatísticas agregadas (rampa) gravadas em {out_path_agg}")
+        for size in sorted(all_data.keys()):
+            writer.writerow([
+                size,
+                f"{statistics.mean(all_data[size]['media']):.5f}",
+                f"{statistics.mean(all_data[size]['mediana']):.5f}",
+                f"{statistics.mean(all_data[size]['p95']):.5f}",
+                f"{statistics.mean(all_data[size]['p99']):.5f}",
+                f"{statistics.mean(all_data[size]['jitter']):.5f}",
+                f"{statistics.mean(all_data[size]['taxa_perda']):.2f}",
+                all_data[size]['n_total']
+            ])
+    
+    print(f"[SUCCESS] Dados agregados da rede {network_speed} Mbps salvos em {out_path}")
+    return True
 
 def generate_summary_report():
     """
-    Gera um relatório resumido da análise para todos os experimentos.
+    Gera relatório resumido comparando redes de 10 e 100 Mbps.
     """
     print("\n" + "="*60)
     print("RESUMO DA ANÁLISE DE DESEMPENHO UDP")
     print("="*60)
     
-    for client_id in [1, 2]:
-        stats_file = f"stats_cliente{client_id}.csv"
-        if not os.path.exists(stats_file):
-            continue
-            
-        print(f"\n### EXPERIMENTO 1 - Cliente {client_id} ###")
-        
-        with open(stats_file, newline="") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            
-            if not rows:
-                print("Sem dados disponíveis")
-                continue
-            
-            all_min = min(float(r["min_ms"]) for r in rows)
-            all_max = max(float(r["max_ms"]) for r in rows)
-            
-            avg_loss = statistics.mean(float(r["taxa_perda_%"]) for r in rows)
-            
-            max_std_row = max(rows, key=lambda r: float(r["dp_ms"]))
-            
-            total_outliers = sum(int(r["num_outliers"]) for r in rows)
-            
-            print(f"RTT mínimo global: {all_min:.3f} ms")
-            print(f"RTT máximo global: {all_max:.3f} ms")
-            print(f"Taxa de perda média: {avg_loss:.2f}%")
-            print(f"Tamanho com maior variabilidade: {max_std_row['tamanho_bytes']} bytes")
-            print(f"  - Desvio padrão: {float(max_std_row['dp_ms']):.3f} ms")
-            print(f"Total de outliers detectados: {total_outliers}")
+    print("\n### RELATÓRIO DE PERDA DE PACOTES ###")
     
-    for client_id in [1, 2]:
-        stats_file = f"stats_ramp_aggregated_cliente{client_id}.csv"
-        if not os.path.exists(stats_file):
-            continue
-            
-        print(f"\n### EXPERIMENTO 2 (RAMPA) - Cliente {client_id} ###")
-        
-        with open(stats_file, newline="") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            
-            if not rows:
-                print("Sem dados disponíveis")
-                continue
-            
-            saturation_info = []
-            for r in rows:
-                if r["nivel_saturacao"] != "N/A":
-                    saturation_info.append({
-                        "size": int(r["tamanho_bytes"]),
-                        "level": int(r["nivel_saturacao"])
-                    })
-            
-            if saturation_info:
-                print("Níveis de saturação detectados:")
-                for info in sorted(saturation_info, key=lambda x: x["size"]):
-                    taxa = 10 + ((100 - 10) * (info["level"] - 1) / 9)
-                    print(f"  - {info['size']} bytes: nível {info['level']} (~{taxa:.0f} req/s)")
-            else:
-                print("Nenhuma saturação detectada nos níveis testados")
-            
-            avg_p95 = statistics.mean(float(r["p95_ms"]) for r in rows)
-            avg_p99 = statistics.mean(float(r["p99_ms"]) for r in rows)
-            
-            print(f"P95 médio (todos os tamanhos): {avg_p95:.3f} ms")
-            print(f"P99 médio (todos os tamanhos): {avg_p99:.3f} ms")
+    for pattern in ["raw_data_cliente*.csv", "raw_data_cliente*_100.csv"]:
+        for filepath in sorted(glob.glob(pattern)):
+            if os.path.exists(filepath):
+                print(f"\n--- {filepath} ---")
+                
+                total_registros = 0
+                registros_validos = 0
+                registros_timeout = 0
+                
+                with open(filepath, newline="") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        total_registros += 1
+                        try:
+                            rtt = float(row.get("rtt_ms", 0))
+                            if rtt >= 0:
+                                registros_validos += 1
+                            else:
+                                registros_timeout += 1
+                        except:
+                            registros_timeout += 1
+                
+                if total_registros > 0:
+                    taxa_perda = (registros_timeout / total_registros) * 100
+                    taxa_sucesso = (registros_validos / total_registros) * 100
+                    
+                    print(f"Total de registros: {total_registros}")
+                    print(f"Registros válidos: {registros_validos} ({taxa_sucesso:.2f}%)")
+                    print(f"Timeouts/Perdas: {registros_timeout} ({taxa_perda:.2f}%)")
+                else:
+                    print("Arquivo vazio ou sem dados válidos")
+    
+    print("\n### RELATÓRIO DE RAMPA ###")
+    for pattern in ["ramp_data_cliente*.csv", "ramp_data_cliente*_100.csv"]:
+        for filepath in sorted(glob.glob(pattern)):
+            if os.path.exists(filepath):
+                print(f"\n--- {filepath} ---")
+                
+                total_registros = 0
+                registros_validos = 0
+                registros_timeout = 0
+                
+                with open(filepath, newline="") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        total_registros += 1
+                        try:
+                            rtt = float(row.get("rtt_ms", 0))
+                            if rtt >= 0:
+                                registros_validos += 1
+                            else:
+                                registros_timeout += 1
+                        except:
+                            registros_timeout += 1
+                
+                if total_registros > 0:
+                    taxa_perda = (registros_timeout / total_registros) * 100
+                    taxa_sucesso = (registros_validos / total_registros) * 100
+                    
+                    print(f"Total de registros: {total_registros}")
+                    print(f"Registros válidos: {registros_validos} ({taxa_sucesso:.2f}%)")
+                    print(f"Timeouts/Perdas: {registros_timeout} ({taxa_perda:.2f}%)")
+                else:
+                    print("Arquivo vazio ou sem dados válidos")
+    
+    print("\n### ANÁLISE AGREGADA POR REDE ###")
+    
+    if os.path.exists("stats_network_10mbps.csv"):
+        print("\n--- REDE DE 10 Mbps ---")
+        with open("stats_network_10mbps.csv", newline="") as f:
+            reader = list(csv.DictReader(f))
+            if reader:
+                avg_rtt = statistics.mean(float(r["media_agregada_ms"]) for r in reader)
+                avg_loss = statistics.mean(float(r["taxa_perda_agregada_%"]) for r in reader)
+                max_loss = max(float(r["taxa_perda_agregada_%"]) for r in reader)
+                min_loss = min(float(r["taxa_perda_agregada_%"]) for r in reader)
+                
+                print(f"RTT médio geral: {avg_rtt:.3f} ms")
+                print(f"Taxa de perda média: {avg_loss:.2f}%")
+                print(f"Taxa de perda máxima: {max_loss:.2f}%")
+                print(f"Taxa de perda mínima: {min_loss:.2f}%")
+                
+                max_loss_size = max(reader, key=lambda r: float(r["taxa_perda_agregada_%"]))
+                print(f"Tamanho com maior perda: {max_loss_size['tamanho_bytes']} bytes ({float(max_loss_size['taxa_perda_agregada_%']):.2f}%)")
+    
+    if os.path.exists("stats_network_100mbps.csv"):
+        print("\n--- REDE DE 100 Mbps ---")
+        with open("stats_network_100mbps.csv", newline="") as f:
+            reader = list(csv.DictReader(f))
+            if reader:
+                avg_rtt = statistics.mean(float(r["media_agregada_ms"]) for r in reader)
+                avg_loss = statistics.mean(float(r["taxa_perda_agregada_%"]) for r in reader)
+                max_loss = max(float(r["taxa_perda_agregada_%"]) for r in reader)
+                min_loss = min(float(r["taxa_perda_agregada_%"]) for r in reader)
+                
+                print(f"RTT médio geral: {avg_rtt:.3f} ms")
+                print(f"Taxa de perda média: {avg_loss:.2f}%")
+                print(f"Taxa de perda máxima: {max_loss:.2f}%")
+                print(f"Taxa de perda mínima: {min_loss:.2f}%")
+                
+                max_loss_size = max(reader, key=lambda r: float(r["taxa_perda_agregada_%"]))
+                print(f"Tamanho com maior perda: {max_loss_size['tamanho_bytes']} bytes ({float(max_loss_size['taxa_perda_agregada_%']):.2f}%)")
     
     print("\n" + "="*60)
-    print("Análise concluída. Verifique os arquivos CSV e PNG gerados.")
-    print("="*60 + "\n")
 
 def main():
     print("[ANALYZE] Iniciando processamento dos dados...")
+    print("[ANALYZE] Analisando estrutura de arquivos...\n")
     
-    process_raw_files()
+    has_10mbps = process_raw_files_by_network("10")
+    if has_10mbps:
+        aggregate_clients_by_network("10")
     
-    process_ramp_files()
+    has_10mbps_ramp = process_ramp_files_by_network("10")
     
-    generate_summary_report()
+    has_100mbps = process_raw_files_by_network("100")
+    if has_100mbps:
+        aggregate_clients_by_network("100")
+    
+    has_100mbps_ramp = process_ramp_files_by_network("100")
+    
+    if has_10mbps or has_100mbps:
+        generate_summary_report()
+    else:
+        print("[ERROR] Nenhum arquivo de dados encontrado!")
+        print("[ERROR] Certifique-se de que existem arquivos:")
+        print("        - raw_data_cliente[1-2].csv (rede 10 Mbps)")
+        print("        - raw_data_cliente[1-2]_100.csv (rede 100 Mbps)")
 
 if __name__ == "__main__":
     main()

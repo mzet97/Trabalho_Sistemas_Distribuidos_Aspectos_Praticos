@@ -1,0 +1,48 @@
+============================================================
+RESUMO DA ANÁLISE DE DESEMPENHO UDP
+============================================================
+
+### RELATÓRIO DE PERDA DE PACOTES ###
+
+--- raw_data_cliente1.csv ---
+Total de registros: 15439717
+Registros válidos: 15307027 (99.14%)
+Timeouts/Perdas: 132690 (0.86%)
+
+--- raw_data_cliente1_100.csv ---
+Total de registros: 15759716
+Registros válidos: 15471855 (98.17%)
+Timeouts/Perdas: 287861 (1.83%)
+
+--- raw_data_cliente2.csv ---
+Total de registros: 15279751
+Registros válidos: 15158061 (99.20%)
+Timeouts/Perdas: 121690 (0.80%)
+
+--- raw_data_cliente2_100.csv ---
+Total de registros: 15535712
+Registros válidos: 15260236 (98.23%)
+Timeouts/Perdas: 275476 (1.77%)
+
+--- raw_data_cliente1_100.csv ---
+Total de registros: 15759716
+Registros válidos: 15471855 (98.17%)
+Timeouts/Perdas: 287861 (1.83%)
+
+--- raw_data_cliente2_100.csv ---
+Total de registros: 15535712
+Registros válidos: 15260236 (98.23%)
+Timeouts/Perdas: 275476 (1.77%)
+
+### RELATÓRIO DE RAMPA ###
+
+### ANÁLISE AGREGADA POR REDE ###
+
+--- REDE DE 100 Mbps ---
+RTT médio geral: 3.965 ms
+Taxa de perda média: 16.61%
+Taxa de perda máxima: 92.86%
+Taxa de perda mínima: 0.00%
+Tamanho com maior perda: 27 bytes (92.86%)
+
+============================================================

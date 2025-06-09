@@ -198,13 +198,13 @@ Abra duas abas/janelas no terminal:
 1. **Aba 1 (rede 10 Mb/s)**  
 
    ```bash
-   ./server_udp 10.0.10.12 50000
+   ./server_udp 10.0.0.12 50000
    ```
 
 2. **Aba 2 (rede 100 Mb/s)**  
 
    ```bash
-   ./server_udp 10.0.100.12 50000
+   ./server_udp 100.0.012 50000
    ```
 
 O servidor imprime estatísticas básicas e pode ser interrompido com Ctrl+C.
@@ -346,18 +346,10 @@ O script gera automaticamente um relatório no terminal com:
 
 ## 10. Geração de Gráficos
 
-### 10.1 Gráficos Básicos
+### 10.4 Gráficos
 
 ```bash
 gnuplot plot_commands.gnuplot
-```
-
-Gera 4 gráficos básicos com média e desvio padrão.
-
-### 10.2 Gráficos Detalhados
-
-```bash
-gnuplot plot_commands_improved.gnuplot
 ```
 
 Gera 8+ gráficos incluindo:
@@ -411,11 +403,11 @@ Gera 8+ gráficos incluindo:
 
 ```bash
 # Verificar conectividade
-ping -c 5 10.0.10.12
-ping -c 5 10.0.100.12
+ping -c 5 10.0.0.12
+ping -c 5 100.0.012
 
 # Testar servidor manualmente
-echo "TEST" | nc -u 10.0.10.12 50000
+echo "TEST" | nc -u 10.0.0.12 50000
 ```
 
 ### 12.2 Erro de Bind
