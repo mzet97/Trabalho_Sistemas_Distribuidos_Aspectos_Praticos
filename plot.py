@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 print("="*60)
-print("Gerando gráficos em português a partir dos dados de rede")
+print("Gerando gráficos a partir dos dados de rede")
 print("="*60)
 
 plt.rcParams['font.family'] = 'DejaVu Sans'
@@ -29,12 +29,76 @@ def carregar_dados(arquivo):
         print(f" Erro ao carregar {arquivo}: {e}")
         return None
 
+def criar_stats_rede_agregados():
+    """Cria estatísticas de rede agregadas a partir dos dados dos clientes"""
+    try:
+        arquivos_10mbps = []
+        arquivos_100mbps = []
+        
+        if verificar_arquivo("stats_cliente1.csv"):
+            arquivos_10mbps.append("stats_cliente1.csv")
+        if verificar_arquivo("stats_cliente2.csv"):
+            arquivos_10mbps.append("stats_cliente2.csv")
+        if verificar_arquivo("stats_cliente1_100.csv"):
+            arquivos_100mbps.append("stats_cliente1_100.csv")
+        if verificar_arquivo("stats_cliente2_100.csv"):
+            arquivos_100mbps.append("stats_cliente2_100.csv")
+        
+        def agregar_dados(arquivos, sufixo):
+            if not arquivos:
+                return None
+            
+            dados_agregados = []
+            for arquivo in arquivos:
+                df = carregar_dados(arquivo)
+                if df is not None:
+                    dados_agregados.append(df)
+            
+            if not dados_agregados:
+                return None
+            
+            df_agregado = pd.concat(dados_agregados, ignore_index=True)
+            
+            stats = df_agregado.groupby('tamanho_bytes').agg({
+                'media_ms': 'mean',
+                'jitter_ms': 'mean',
+                'p95_ms': 'mean',
+                'p99_ms': 'mean',
+                'taxa_perda_%': 'mean'
+            }).reset_index()
+            
+            stats = stats.rename(columns={
+                'media_ms': 'media_agregada_ms',
+                'jitter_ms': 'jitter_agregada_ms',
+                'p95_ms': 'p95_agregado_ms',
+                'p99_ms': 'p99_agregado_ms',
+                'taxa_perda_%': 'taxa_perda_agregada_%'
+            })
+            
+            arquivo_saida = f"stats_network_{sufixo}.csv"
+            stats.to_csv(arquivo_saida, index=False)
+            print(f" Criado: {arquivo_saida}")
+            return stats
+        
+        if arquivos_10mbps:
+            agregar_dados(arquivos_10mbps, "10mbps")
+        if arquivos_100mbps:
+            agregar_dados(arquivos_100mbps, "100mbps")
+            
+    except Exception as e:
+        print(f" Erro ao criar stats agregados: {e}")
+
 os.makedirs('graficos', exist_ok=True)
 
 print("\n=== INICIANDO GERAÇÃO DE GRÁFICOS ===")
 print()
 
-print("1. Gerando: RTT vs Tamanho - Cliente 1 (10 Mbps)")
+print("0. Verificando/criando estatísticas de rede...")
+if not (verificar_arquivo("stats_network_10mbps.csv") and verificar_arquivo("stats_network_100mbps.csv")):
+    print(" Arquivos de rede não encontrados, tentando criar...")
+    criar_stats_rede_agregados()
+
+print("\n1. Gerando: RTT vs Tamanho - Cliente 1 (10 Mbps)")
 try:
     if verificar_arquivo("stats_cliente1.csv"):
         df = carregar_dados("stats_cliente1.csv")
@@ -56,7 +120,7 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/01_rtt_cliente1_10mbps.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/01_rtt_cliente1_10mbps.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 01_rtt_cliente1_10mbps.png")
     else:
@@ -86,7 +150,7 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/02_rtt_cliente1_100mbps.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/02_rtt_cliente1_100mbps.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 02_rtt_cliente1_100mbps.png")
     else:
@@ -114,11 +178,34 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/03_comparacao_rtt_redes.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/03_comparacao_rtt_redes.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 03_comparacao_rtt_redes.png")
     else:
-        print(" Arquivos de rede não encontrados")
+        print(" Tentando usar dados individuais de clientes...")
+        if (verificar_arquivo("stats_cliente1.csv") and 
+            verificar_arquivo("stats_cliente1_100.csv")):
+            df_10 = carregar_dados("stats_cliente1.csv")
+            df_100 = carregar_dados("stats_cliente1_100.csv")
+            if df_10 is not None and df_100 is not None:
+                fig, ax = plt.subplots(figsize=(12, 8))
+                ax.plot(df_10['tamanho_bytes'], df_10['media_ms'], 'o-', 
+                        color='#1f77b4', linewidth=2, markersize=5, label='Cliente 1 - 10 Mbps')
+                ax.plot(df_100['tamanho_bytes'], df_100['media_ms'], 's-', 
+                        color='#ff7f0e', linewidth=2, markersize=5, label='Cliente 1 - 100 Mbps')
+                ax.set_xscale('log', base=2)
+                ax.set_title('Comparação de RTT Médio: 10 Mbps vs 100 Mbps (Cliente 1)', 
+                            fontsize=14, fontweight='bold')
+                ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
+                ax.set_ylabel('RTT Médio (ms)', fontsize=12)
+                ax.grid(True, alpha=0.3)
+                ax.legend()
+                plt.tight_layout()
+                plt.savefig('graficos/03_comparacao_rtt_redes.png', dpi=300, bbox_inches='tight')
+                plt.close()
+                print(" 03_comparacao_rtt_redes.png (usando dados do Cliente 1)")
+        else:
+            print(" Nenhum arquivo compatível encontrado")
 except Exception as e:
     print(f" Erro: {e}")
 
@@ -143,11 +230,38 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/04_comparacao_perda_redes.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/04_comparacao_perda_redes.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 04_comparacao_perda_redes.png")
     else:
-        print(" Arquivos de rede não encontrados")
+        if (verificar_arquivo("stats_cliente1.csv") and 
+            verificar_arquivo("stats_cliente1_100.csv")):
+            df_10 = carregar_dados("stats_cliente1.csv")
+            df_100 = carregar_dados("stats_cliente1_100.csv")
+            if df_10 is not None and df_100 is not None:
+                fig, ax = plt.subplots(figsize=(12, 8))
+                perda_col = 'taxa_perda_%' if 'taxa_perda_%' in df_10.columns else None
+                if perda_col:
+                    ax.plot(df_10['tamanho_bytes'], df_10[perda_col], 'o-', 
+                            color='#d62728', linewidth=2, markersize=5, label='Cliente 1 - 10 Mbps')
+                    ax.plot(df_100['tamanho_bytes'], df_100[perda_col], 's-', 
+                            color='#2ca02c', linewidth=2, markersize=5, label='Cliente 1 - 100 Mbps')
+                    ax.set_xscale('log', base=2)
+                    ax.set_ylim(0, 100)
+                    ax.set_title('Comparação de Taxa de Perda: 10 Mbps vs 100 Mbps (Cliente 1)', 
+                                fontsize=14, fontweight='bold')
+                    ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
+                    ax.set_ylabel('Taxa de Perda (%)', fontsize=12)
+                    ax.grid(True, alpha=0.3)
+                    ax.legend()
+                    plt.tight_layout()
+                    plt.savefig('graficos/04_comparacao_perda_redes.png', dpi=300, bbox_inches='tight')
+                    plt.close()
+                    print(" 04_comparacao_perda_redes.png (usando dados do Cliente 1)")
+                else:
+                    print(" Coluna de taxa de perda não encontrada")
+        else:
+            print(" Nenhum arquivo compatível encontrado")
 except Exception as e:
     print(f" Erro: {e}")
 
@@ -175,11 +289,41 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/05_comparacao_jitter_redes.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/05_comparacao_jitter_redes.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 05_comparacao_jitter_redes.png")
     else:
-        print(" Arquivos de rede não encontrados")
+        if (verificar_arquivo("stats_cliente1.csv") and 
+            verificar_arquivo("stats_cliente1_100.csv")):
+            df_10 = carregar_dados("stats_cliente1.csv")
+            df_100 = carregar_dados("stats_cliente1_100.csv")
+            if df_10 is not None and df_100 is not None:
+                jitter_col = 'jitter_ms' if 'jitter_ms' in df_10.columns else None
+                if jitter_col:
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    ax.plot(df_10['tamanho_bytes'], df_10[jitter_col], '-', 
+                            color='#9467bd', linewidth=2, label='Cliente 1 - 10 Mbps')
+                    ax.plot(df_10['tamanho_bytes'], df_10[jitter_col], 'o', 
+                            color='#9467bd', markersize=3, alpha=0.7)
+                    ax.plot(df_100['tamanho_bytes'], df_100[jitter_col], '-', 
+                            color='#8c564b', linewidth=2, label='Cliente 1 - 100 Mbps')
+                    ax.plot(df_100['tamanho_bytes'], df_100[jitter_col], 's', 
+                            color='#8c564b', markersize=3, alpha=0.7)
+                    ax.set_xscale('log', base=2)
+                    ax.set_title('Comparação de Jitter Médio: 10 Mbps vs 100 Mbps (Cliente 1)', 
+                                fontsize=14, fontweight='bold')
+                    ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
+                    ax.set_ylabel('Jitter Médio (ms)', fontsize=12)
+                    ax.grid(True, alpha=0.3)
+                    ax.legend()
+                    plt.tight_layout()
+                    plt.savefig('graficos/05_comparacao_jitter_redes.png', dpi=300, bbox_inches='tight')
+                    plt.close()
+                    print(" 05_comparacao_jitter_redes.png (usando dados do Cliente 1)")
+                else:
+                    print(" Coluna de jitter não encontrada")
+        else:
+            print(" Nenhum arquivo compatível encontrado")
 except Exception as e:
     print(f" Erro: {e}")
 
@@ -207,11 +351,37 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/06_comparacao_percentis.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/06_comparacao_percentis.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 06_comparacao_percentis.png")
     else:
-        print(" Arquivos de rede não encontrados")
+        if (verificar_arquivo("stats_cliente1.csv") and 
+            verificar_arquivo("stats_cliente1_100.csv")):
+            df_10 = carregar_dados("stats_cliente1.csv")
+            df_100 = carregar_dados("stats_cliente1_100.csv")
+            if df_10 is not None and df_100 is not None:
+                fig, ax = plt.subplots(figsize=(12, 8))
+                ax.plot(df_10['tamanho_bytes'], df_10['p95_ms'], '-', 
+                        color='#d62728', linewidth=2, label='Cliente 1 10 Mbps - P95')
+                ax.plot(df_10['tamanho_bytes'], df_10['p99_ms'], '--', 
+                        color='#d62728', linewidth=2, label='Cliente 1 10 Mbps - P99')
+                ax.plot(df_100['tamanho_bytes'], df_100['p95_ms'], '-', 
+                        color='#2ca02c', linewidth=2, label='Cliente 1 100 Mbps - P95')
+                ax.plot(df_100['tamanho_bytes'], df_100['p99_ms'], '--', 
+                        color='#2ca02c', linewidth=2, label='Cliente 1 100 Mbps - P99')
+                ax.set_xscale('log', base=2)
+                ax.set_title('Comparação de Percentis P95 e P99 (Cliente 1)', 
+                            fontsize=14, fontweight='bold')
+                ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
+                ax.set_ylabel('RTT (ms)', fontsize=12)
+                ax.grid(True, alpha=0.3)
+                ax.legend()
+                plt.tight_layout()
+                plt.savefig('graficos/06_comparacao_percentis.png', dpi=300, bbox_inches='tight')
+                plt.close()
+                print(" 06_comparacao_percentis.png (usando dados do Cliente 1)")
+        else:
+            print(" Nenhum arquivo compatível encontrado")
 except Exception as e:
     print(f" Erro: {e}")
 
@@ -260,9 +430,9 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             ax = axes[1, 1]
-            ax.plot(df_10['tamanho_bytes'], df_10['p95_agregada_ms'], 'o-', 
+            ax.plot(df_10['tamanho_bytes'], df_10['p95_agregado_ms'], 'o-', 
                     color='#17becf', linewidth=2, markersize=3, label='10 Mbps')
-            ax.plot(df_100['tamanho_bytes'], df_100['p95_agregada_ms'], 's-', 
+            ax.plot(df_100['tamanho_bytes'], df_100['p95_agregado_ms'], 's-', 
                     color='#bcbd22', linewidth=2, markersize=3, label='100 Mbps')
             ax.set_xscale('log', base=2)
             ax.set_title('Percentil 95', fontsize=12, fontweight='bold')
@@ -271,9 +441,9 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             ax = axes[2, 0]
-            ax.plot(df_10['tamanho_bytes'], df_10['p99_agregada_ms'], 'o-', 
+            ax.plot(df_10['tamanho_bytes'], df_10['p99_agregado_ms'], 'o-', 
                     color='#e377c2', linewidth=2, markersize=3, label='10 Mbps')
-            ax.plot(df_100['tamanho_bytes'], df_100['p99_agregada_ms'], 's-', 
+            ax.plot(df_100['tamanho_bytes'], df_100['p99_agregado_ms'], 's-', 
                     color='#7f7f7f', linewidth=2, markersize=3, label='100 Mbps')
             ax.set_xscale('log', base=2)
             ax.set_title('Percentil 99', fontsize=12, fontweight='bold')
@@ -293,11 +463,11 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/07_dashboard_rede_comparativo.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/07_dashboard_rede_comparativo.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 07_dashboard_rede_comparativo.png")
     else:
-        print(" Arquivos de rede não encontrados")
+        print(" Arquivos de rede agregados não encontrados, pulando dashboard")
 except Exception as e:
     print(f" Erro: {e}")
 
@@ -327,7 +497,7 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/08_cliente1_comparacao_rede.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/08_cliente1_comparacao_rede.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 08_cliente1_comparacao_rede.png")
     else:
@@ -361,7 +531,7 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/09_cliente2_comparacao_rede.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/09_cliente2_comparacao_rede.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 09_cliente2_comparacao_rede.png")
     else:
@@ -376,6 +546,9 @@ try:
         df_10 = carregar_dados("stats_ramp_cliente1.csv")
         df_100 = carregar_dados("stats_ramp_cliente1_100.csv")
         if df_10 is not None and df_100 is not None:
+            nivel_col = 'nivel' if 'nivel' in df_10.columns else df_10.columns[1]
+            rtt_col = 'media_ms' if 'media_ms' in df_10.columns else df_10.columns[3]
+            
             df_10_1k = df_10[df_10['tamanho_bytes'] == 1024].copy()
             df_100_1k = df_100[df_100['tamanho_bytes'] == 1024].copy()
             if not df_10_1k.empty and not df_100_1k.empty:
@@ -397,7 +570,7 @@ try:
                 ax.grid(True, alpha=0.3)
                 ax.legend()
                 plt.tight_layout()
-                plt.savefig('graficos_portugues/10_ramp_cliente1_rtt_carga.png', dpi=300, bbox_inches='tight')
+                plt.savefig('graficos/10_ramp_cliente1_rtt_carga.png', dpi=300, bbox_inches='tight')
                 plt.close()
                 print(" 10_ramp_cliente1_rtt_carga.png")
             else:
@@ -414,13 +587,16 @@ try:
         df_10 = carregar_dados("stats_ramp_cliente1.csv")
         df_100 = carregar_dados("stats_ramp_cliente1_100.csv")
         if df_10 is not None and df_100 is not None:
+            nivel_col = 'nivel' if 'nivel' in df_10.columns else df_10.columns[1]
+            perda_col = 'taxa_perda_%' if 'taxa_perda_%' in df_10.columns else (
+                df_10.columns[13] if len(df_10.columns) > 13 else df_10.columns[-1])
+            
             df_10_1k = df_10[df_10['tamanho_bytes'] == 1024].copy()
             df_100_1k = df_100[df_100['tamanho_bytes'] == 1024].copy()
             df_10_64k = df_10[df_10['tamanho_bytes'] == 65507].copy()
             df_100_64k = df_100[df_100['tamanho_bytes'] == 65507].copy()
             fig, ax = plt.subplots(figsize=(12, 8))
-            nivel_col = df_10.columns[1]
-            perda_col = df_10.columns[13] if len(df_10.columns) > 13 else df_10.columns[-1]
+            
             if not df_10_1k.empty:
                 ax.plot(df_10_1k[nivel_col], df_10_1k[perda_col], 'o-', 
                         color='#1f77b4', linewidth=2, markersize=4, label='10 Mbps - 1KB')
@@ -442,7 +618,7 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend()
             plt.tight_layout()
-            plt.savefig('graficos_portugues/11_ramp_perda_vs_nivel.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/11_ramp_perda_vs_nivel.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 11_ramp_perda_vs_nivel.png")
     else:
@@ -460,8 +636,10 @@ try:
             fig, ax = plt.subplots(figsize=(12, 8))
             ax.axhline(y=1.5, color='black', linestyle='--', linewidth=2, alpha=0.7)
             ax.text(10, 1.6, 'Limiar de Saturação (150%)', ha='center', fontsize=10)
-            nivel_col = df_10.columns[1]
-            rtt_col = df_10.columns[3]
+            
+            nivel_col = 'nivel' if 'nivel' in df_10.columns else df_10.columns[1]
+            rtt_col = 'media_ms' if 'media_ms' in df_10.columns else df_10.columns[3]
+            
             def normalizar_rtt(df, tamanho):
                 df_filtered = df[df['tamanho_bytes'] == tamanho].copy()
                 if df_filtered.empty:
@@ -471,12 +649,14 @@ try:
                     df_filtered['rtt_normalizado'] = df_filtered[rtt_col] / base_rtt
                     return df_filtered
                 return pd.DataFrame()
+            
             df_10_2b = normalizar_rtt(df_10, 2)
             df_100_2b = normalizar_rtt(df_100, 2)
             df_10_1k = normalizar_rtt(df_10, 1024)
             df_100_1k = normalizar_rtt(df_100, 1024)
             df_10_64k = normalizar_rtt(df_10, 65507)
             df_100_64k = normalizar_rtt(df_100, 65507)
+            
             if not df_10_2b.empty:
                 ax.plot(df_10_2b[nivel_col], df_10_2b['rtt_normalizado'], '-', 
                         color='#ff0000', linewidth=2, label='10 Mbps - 2 bytes')
@@ -504,7 +684,7 @@ try:
             ax.grid(True, alpha=0.3)
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.tight_layout()
-            plt.savefig('graficos_portugues/12_analise_saturacao.png', dpi=300, bbox_inches='tight')
+            plt.savefig('graficos/12_analise_saturacao.png', dpi=300, bbox_inches='tight')
             plt.close()
             print(" 12_analise_saturacao.png")
     else:
@@ -532,7 +712,7 @@ graficos_gerados = [
 
 total_gerados = 0
 for grafico in graficos_gerados:
-    caminho = os.path.join('graficos_portugues', grafico)
+    caminho = os.path.join('graficos', grafico)
     if os.path.exists(caminho):
         total_gerados += 1
         tamanho = os.path.getsize(caminho)
@@ -543,15 +723,13 @@ for grafico in graficos_gerados:
 print()
 print(f" Total de gráficos gerados: {total_gerados}/{len(graficos_gerados)}")
 
-if os.path.exists('graficos_portugues'):
-    arquivos = os.listdir('graficos_portugues')
-    total_size = sum(os.path.getsize(os.path.join('graficos_portugues', f)) 
+if os.path.exists('graficos'):
+    arquivos = os.listdir('graficos')
+    total_size = sum(os.path.getsize(os.path.join('graficos', f)) 
                      for f in arquivos if f.endswith('.png'))
     print(f" Tamanho total: {total_size:,} bytes ({total_size/1024/1024:.1f} MB)")
 
 print()
 print("="*60)
-print("MIGRAÇÃO GNUPLOT → PYTHON CONCLUÍDA!")
-print("Todos os gráficos estão em português no diretório 'graficos_portugues/'")
-print("Gráficos equivalentes aos do plot_commands.gnuplot mas com estilo português")
+print("Todos os gráficos estão no diretório 'graficos/'")
 print("="*60)
