@@ -27,6 +27,7 @@ cd Trabalho_Sistemas_Distribuidos_Aspectos_Praticos
 ├── client1/              # Diretório para dados do Cliente 1 (gerado dinamicamente)
 ├── client2/              # Diretório para dados do Cliente 2 (gerado dinamicamente)  
 ├── server/               # Diretório para configurações do servidor
+├── graficos/             # Diretório para gráficos gerados (criado automaticamente)
 ├── .vscode/              # Configurações do VS Code
 │   └── settings.json     # Associações de arquivos
 ├── .gitignore            # Arquivos ignorados pelo Git
@@ -41,8 +42,9 @@ server_udp.c              # Servidor UDP echo
 client_udp.c              # Cliente para Experimento 1
 client_udp_ramp.c         # Cliente para Experimento 2
 Makefile                  # Script de compilação
-analyze.py                # Análise estatística avançada
-plot_commands.gnuplot     # Comandos para gerar gráficos avançados
+analyze.py                # Análise estatística avançada (Python)
+plot.py                   # Geração de gráficos interpretativos (Python)
+plot_commands.gnuplot     # Comandos para gerar gráficos (Gnuplot - opcional)
 analyze_packets.sh        # Análise de captura de pacotes com tcpdump
 ```
 
@@ -71,36 +73,63 @@ run_client2_ramp_100.sh   # Cliente 2 Rampa - Rede 100 Mbps
 #### Dados Brutos
 
 ```text
-raw_data_cliente1.csv       # Medições brutas - Cliente 1 (Exp. 1)
-raw_data_cliente2.csv       # Medições brutas - Cliente 2 (Exp. 1)
-ramp_data_cliente1.csv      # Medições de rampa - Cliente 1 (Exp. 2)
-ramp_data_cliente2.csv      # Medições de rampa - Cliente 2 (Exp. 2)
+raw_data_cliente1.csv       # Medições brutas - Cliente 1 (Exp. 1 - 10 Mbps)
+raw_data_cliente1_100.csv   # Medições brutas - Cliente 1 (Exp. 1 - 100 Mbps)
+raw_data_cliente2.csv       # Medições brutas - Cliente 2 (Exp. 1 - 10 Mbps)
+raw_data_cliente2_100.csv   # Medições brutas - Cliente 2 (Exp. 1 - 100 Mbps)
+ramp_data_cliente1.csv      # Medições de rampa - Cliente 1 (Exp. 2 - 10 Mbps)
+ramp_data_cliente1_100.csv  # Medições de rampa - Cliente 1 (Exp. 2 - 100 Mbps)
+ramp_data_cliente2.csv      # Medições de rampa - Cliente 2 (Exp. 2 - 10 Mbps)
+ramp_data_cliente2_100.csv  # Medições de rampa - Cliente 2 (Exp. 2 - 100 Mbps)
 ```
 
 #### Estatísticas Processadas
 
 ```text
-stats_cliente1.csv          # Estatísticas detalhadas - Cliente 1 (Exp. 1)
-stats_cliente2.csv          # Estatísticas detalhadas - Cliente 2 (Exp. 1)
-stats_ramp_cliente1.csv     # Estatísticas por nível - Cliente 1 (Exp. 2)
-stats_ramp_cliente2.csv     # Estatísticas por nível - Cliente 2 (Exp. 2)
-stats_ramp_aggregated_cliente1.csv  # Estatísticas agregadas - Cliente 1
-stats_ramp_aggregated_cliente2.csv  # Estatísticas agregadas - Cliente 2
+stats_cliente1.csv          # Estatísticas detalhadas - Cliente 1 (10 Mbps)
+stats_cliente1_100.csv      # Estatísticas detalhadas - Cliente 1 (100 Mbps)
+stats_cliente2.csv          # Estatísticas detalhadas - Cliente 2 (10 Mbps)
+stats_cliente2_100.csv      # Estatísticas detalhadas - Cliente 2 (100 Mbps)
+stats_ramp_cliente1.csv     # Estatísticas por nível - Cliente 1 (10 Mbps)
+stats_ramp_cliente1_100.csv # Estatísticas por nível - Cliente 1 (100 Mbps)
+stats_ramp_cliente2.csv     # Estatísticas por nível - Cliente 2 (10 Mbps)
+stats_ramp_cliente2_100.csv # Estatísticas por nível - Cliente 2 (100 Mbps)
+stats_network_10mbps.csv    # Estatísticas agregadas - Rede 10 Mbps
+stats_network_100mbps.csv   # Estatísticas agregadas - Rede 100 Mbps
 ```
 
-#### Gráficos Gerados
+#### Gráficos Gerados (Python - Recomendado)
 
 ```text
-# Gráficos detalhados (analyze.py + plot_commands.gnuplot)
-rtt_vs_size_cliente1_detailed.png   # RTT com IC 98% e percentis - Cliente 1
-rtt_vs_size_cliente2_detailed.png   # RTT com IC 98% e percentis - Cliente 2
-rtt_ramp_vs_level_cliente1_detailed.png  # Rampa detalhada - Cliente 1
-rtt_ramp_vs_level_cliente2_detailed.png  # Rampa detalhada - Cliente 2
-loss_rate_vs_size.png               # Taxa de perda vs tamanho
-jitter_vs_size.png                  # Jitter vs tamanho
-loss_rate_ramp.png                  # Taxa de perda na rampa
-percentiles_comparison.png          # Comparação P95/P99
-outliers_histogram.png              # Histograma de outliers
+graficos/01_rtt_cliente1_10mbps.png        # RTT Cliente 1 - 10 Mbps (simplificado)
+graficos/02_rtt_cliente1_100mbps.png       # RTT Cliente 1 - 100 Mbps (simplificado)
+graficos/03_comparacao_rtt_redes.png       # Comparação RTT entre redes
+graficos/04_comparacao_perda_redes.png     # Comparação taxa de perda
+graficos/05_comparacao_jitter_redes.png    # Comparação jitter médio
+graficos/06_comparacao_percentis.png       # Comparação P95 e P99
+graficos/07_dashboard_rede_comparativo.png # Dashboard completo 2x2
+graficos/08_cliente1_comparacao_rede.png   # Cliente 1 com intervalos de confiança
+graficos/09_cliente2_comparacao_rede.png   # Cliente 2 com intervalos de confiança
+graficos/10_ramp_cliente1_rtt_carga.png    # Análise de rampa RTT vs carga
+graficos/11_ramp_perda_vs_nivel.png        # Taxa de perda vs nível de rampa
+graficos/12_analise_saturacao.png          # RTT normalizado (análise saturação)
+```
+
+#### Gráficos Alternativos (Gnuplot - Opcional)
+
+```text
+rtt_cliente1_10mbps.png                     # RTT com IC 98% e percentis - Cliente 1
+rtt_cliente1_100mbps.png                    # RTT com IC 98% e percentis - Cliente 1 (100 Mbps)
+network_comparison_rtt.png                  # Comparação RTT entre redes
+network_comparison_loss.png                 # Taxa de perda vs tamanho
+network_comparison_jitter.png               # Jitter vs tamanho
+network_comparison_percentiles.png          # Comparação P95/P99
+network_dashboard.png                       # Dashboard 3x2 completo
+cliente1_network_comparison.png             # Cliente 1 comparação redes
+cliente2_network_comparison.png             # Cliente 2 comparação redes
+ramp_cliente1_network_comparison.png        # Rampa Cliente 1
+ramp_loss_network_comparison.png            # Taxa de perda na rampa
+saturation_analysis.png                     # Análise de saturação
 ```
 
 #### Logs de Análise de Rede
@@ -122,15 +151,18 @@ tcpdump_capture_[timestamp].pcap    # Arquivo PCAP para Wireshark
 
    ```bash
    sudo apt update
-   sudo apt install -y build-essential iproute2 gnuplot-nox python3 python3-pip tcpdump bc
+   sudo apt install -y build-essential iproute2 python3 python3-pip python3-pandas python3-matplotlib python3-numpy tcpdump bc gnuplot-nox
    ```
 
    - `build-essential`: GCC, make e bibliotecas padrão  
    - `iproute2`: utilitário `tc` para simular limitação de banda  
-   - `gnuplot-nox`: Gnuplot em modo texto (gera PNG sem interface gráfica)  
-   - `python3`: necessário para o script `analyze.py`
+   - `python3`: necessário para análise e gráficos
+   - `python3-pandas`: manipulação de dados
+   - `python3-matplotlib`: geração de gráficos
+   - `python3-numpy`: computação numérica
    - `tcpdump`: captura e análise de pacotes de rede
-   - `bc`: calculadora para scripts bash (usado em analyze_packets.sh)
+   - `bc`: calculadora para scripts bash
+   - `gnuplot-nox`: Gnuplot (opcional, para gráficos alternativos)
 
 ---
 
@@ -319,46 +351,89 @@ O script `analyze.py` calcula:
 - **Taxa de perda**: porcentagem de timeouts
 - **Detecção de outliers**: método IQR
 - **Nível de saturação**: ponto onde RTT aumenta >50%
+- **Agregação por rede**: estatísticas combinadas de ambos os clientes
 
 ### 9.3 Arquivos de Saída
 
 #### Para Experimento 1
 
-- `stats_cliente[1-2].csv`: 14 colunas com estatísticas completas
+- `stats_cliente[1-2].csv`: 14 colunas com estatísticas completas por cliente
+- `stats_cliente[1-2]_100.csv`: estatísticas para rede 100 Mbps
+- `stats_network_[10|100]mbps.csv`: estatísticas agregadas por rede
 
 #### Para Experimento 2
 
-- `stats_ramp_cliente[1-2].csv`: estatísticas por (tamanho, nível)
-- `stats_ramp_aggregated_cliente[1-2].csv`: agregado por tamanho
+- `stats_ramp_cliente[1-2].csv`: estatísticas por (tamanho, nível) - 10 Mbps
+- `stats_ramp_cliente[1-2]_100.csv`: estatísticas por (tamanho, nível) - 100 Mbps
 
 ### 9.4 Relatório Resumido
 
 O script gera automaticamente um relatório no terminal com:
 
-- RTT mínimo/máximo global
-- Taxa de perda média
-- Tamanho com maior variabilidade
-- Níveis de saturação detectados
-- Estatísticas de percentis
+- RTT mínimo/máximo global por rede
+- Taxa de perda média e máxima
+- Tamanho com maior perda de pacotes
+- Análise comparativa entre redes
+- Estatísticas de registros válidos vs timeouts
 
 ---
 
 ## 10. Geração de Gráficos
 
-### 10.4 Gráficos
+### 10.1 Gráficos Interpretativos com Python (Recomendado)
+
+```bash
+python3 plot.py
+```
+
+**Características dos gráficos Python:**
+
+- **Subamostragem inteligente**: reduz pontos mantendo distribuição logarítmica
+- **Cores contrastantes**: esquema de cores com alto contraste visual
+- **Formatação legível**: eixos formatados em KB/MB, títulos claros
+- **Visualização simplificada**: foco nas tendências principais
+- **Dashboard resumido**: métricas principais em layout 2x2
+
+**Gráficos gerados (12 arquivos PNG):**
+
+1. RTT vs Tamanho - Cliente 1 (10 Mbps) - simplificado
+2. RTT vs Tamanho - Cliente 1 (100 Mbps) - simplificado  
+3. Comparação direta RTT (10 vs 100 Mbps) - versão limpa
+4. Comparação Taxa de Perda (com cores contrastantes)
+5. Comparação Jitter Médio (rosa vs verde)
+6. Comparação Percentis P95/P99 (laranja vs azul)
+7. Dashboard Resumido 2x2 (RTT, Perda, Jitter, Speedup)
+8. Cliente 1 - Comparação entre Redes (com IC 98%)
+9. Cliente 2 - Comparação entre Redes (roxo vs amarelo)
+10. Rampa RTT vs Nível de Carga (1KB)
+11. Taxa de Perda vs Nível de Rampa (1KB e 64KB)
+12. Análise de Saturação - RTT Normalizado
+
+### 10.2 Gráficos Detalhados com Gnuplot (Opcional)
 
 ```bash
 gnuplot plot_commands.gnuplot
 ```
 
-Gera 8+ gráficos incluindo:
+**Características dos gráficos Gnuplot:**
 
-- RTT com intervalo de confiança 98%
-- Percentis P95 e P99
-- Taxa de perda vs tamanho
-- Jitter vs tamanho
-- Comparações entre clientes
-- Análise de saturação na rampa
+- **Todos os pontos**: sem subamostragem, dados completos
+- **Múltiplas métricas**: IC 98%, percentis, outliers
+- **Dashboard 3x2**: layout mais denso
+- **Análise avançada**: speedup, saturação, normalização
+
+Gera 12+ gráficos incluindo análises detalhadas de percentis, jitter e saturação.
+
+### 10.3 Comparação dos Métodos
+
+| Aspecto | Python (plot.py) | Gnuplot (plot_commands.gnuplot) |
+|---------|------------------|----------------------------------|
+| **Interpretabilidade** | ★★★★★ Excelente | ★★★☆☆ Boa |
+| **Velocidade** | ★★★★☆ Rápida | ★★☆☆☆ Lenta |
+| **Personalização** | ★★★★★ Flexível | ★★★☆☆ Limitada |
+| **Dependências** | Python padrão | Gnuplot + AWK |
+| **Tamanho arquivos** | Menor (subamostragem) | Maior (todos os pontos) |
+| **Recomendação** | **Uso geral** | Análise científica detalhada |
 
 ---
 
@@ -378,6 +453,7 @@ Gera 8+ gráficos incluindo:
 - RTT médio e mediana (robustez a outliers)
 - P95/P99 (cauda de latência)
 - Taxa de perda (confiabilidade)
+- Speedup (RTT_10Mbps / RTT_100Mbps)
 
 ### 11.2 Experimento 2 - RTT vs Taxa
 
@@ -393,6 +469,22 @@ Gera 8+ gráficos incluindo:
 - Nível onde RTT aumenta >50% do baseline
 - Taxa correspondente em req/s
 - Comparação entre tamanhos de payload
+- RTT normalizado para identificar saturação
+
+### 11.3 Insights dos Gráficos
+
+**Dashboard Resumido:**
+
+- **RTT Médio**: tendência geral de latência
+- **Taxa de Perda**: confiabilidade da rede
+- **Jitter**: estabilidade da rede
+- **Speedup**: benefício da rede mais rápida
+
+**Análise de Saturação:**
+
+- **Limiar 150%**: ponto crítico de degradação
+- **Normalização**: comparação justa entre cenários
+- **Diferentes tamanhos**: impacto do payload na saturação
 
 ---
 
@@ -421,11 +513,37 @@ echo "TEST" | nc -u 10.0.0.12 50000
 - Conferir logs de erro dos clientes
 - Validar parâmetros de linha de comando
 
+### 12.4 Problemas com Gráficos Python
+
+```bash
+# Instalar dependências se necessário
+pip3 install pandas matplotlib numpy
+
+# Verificar versão Python
+python3 --version  # Deve ser >= 3.6
+
+# Teste básico
+python3 -c "import pandas, matplotlib, numpy; print('OK')"
+```
+
+### 12.5 Problemas com Gnuplot
+
+```bash
+# Verificar instalação
+gnuplot --version
+
+# Teste básico
+echo "plot sin(x)" | gnuplot
+
+# Verificar arquivos CSV
+head -5 stats_cliente1.csv
+```
+
 ---
 
 ## 13. Estrutura dos CSVs
 
-### 13.1 raw_data_cliente[1-2].csv
+### 13.1 raw_data_cliente[1-2][ _100].csv
 
 ```csv
 tamanho_bytes,iteracao,rtt_ms
@@ -434,7 +552,7 @@ tamanho_bytes,iteracao,rtt_ms
 ...
 ```
 
-### 13.2 stats_cliente[1-2].csv
+### 13.2 stats_cliente[1-2][_100].csv
 
 ```csv
 tamanho_bytes,n_validos,media_ms,mediana_ms,dp_ms,jitter_ms,ic_lower_ms,ic_upper_ms,p95_ms,p99_ms,min_ms,max_ms,taxa_perda_%,num_outliers
@@ -442,12 +560,73 @@ tamanho_bytes,n_validos,media_ms,mediana_ms,dp_ms,jitter_ms,ic_lower_ms,ic_upper
 ...
 ```
 
-### 13.3 stats_ramp_aggregated_cliente[1-2].csv
+### 13.3 stats_network_[10|100]mbps.csv
 
 ```csv
-tamanho_bytes,n_total,media_ms,mediana_ms,dp_ms,jitter_ms,p95_ms,p99_ms,min_ms,max_ms,taxa_perda_%,nivel_saturacao
-2,1850,0.25432,0.23421,0.05432,0.03421,0.35432,0.42345,0.15432,0.52341,7.89,15
+tamanho_bytes,media_agregada_ms,mediana_agregada_ms,p95_agregado_ms,p99_agregado_ms,jitter_agregado_ms,taxa_perda_agregada_%,n_total_amostras
+2,0.15234,0.14523,0.19234,0.21345,0.01234,0.50,1990
+...
+```
+
+### 13.4 stats_ramp_cliente[1-2][ _100].csv
+
+```csv
+tamanho_bytes,nivel,n_validos,media_ms,mediana_ms,dp_ms,jitter_ms,ic_lower_ms,ic_upper_ms,p95_ms,p99_ms,min_ms,max_ms,taxa_perda_%,num_outliers
+2,1,98,0.25432,0.23421,0.05432,0.03421,0.24123,0.26741,0.35432,0.42345,0.15432,0.52341,2.00,1
 ...
 ```
 
 ---
+
+## 14. Fluxo de Trabalho Recomendado
+
+1. **Preparação**
+
+   ```bash
+   make all
+   # Iniciar servidores em terminais separados
+   ```
+
+2. **Coleta de Dados**
+
+   ```bash
+   # Executar experimentos (pode levar horas)
+   ./run_client1_10.sh &
+   ./run_client1_100.sh &
+   # ... outros scripts
+   ```
+
+3. **Análise Estatística**
+
+   ```bash
+   python3 analyze.py
+   ```
+
+4. **Geração de Gráficos**
+
+   ```bash
+   python3 plot.py  # Recomendado para relatórios
+   # ou
+   gnuplot plot_commands.gnuplot  # Para análise científica
+   ```
+
+5. **Visualização**
+
+   ```bash
+   ls graficos/  # Ver gráficos gerados
+   ```
+
+---
+
+## 15. Considerações de Performance
+
+- **Tempo de execução**: Experimento completo ~6-8 horas
+- **Espaço em disco**: ~50-100 MB de dados + ~10-20 MB de gráficos
+- **Memória**: Análise Python requer ~200-500 MB RAM
+- **CPU**: Múltiplos clientes podem saturar CPU em máquinas lentas
+
+---
+
+## 16. Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
