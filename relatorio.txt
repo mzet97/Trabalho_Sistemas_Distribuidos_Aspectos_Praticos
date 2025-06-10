@@ -36,13 +36,50 @@ Timeouts/Perdas: 275476 (1.77%)
 
 ### RELATÓRIO DE RAMPA ###
 
+--- ramp_data_cliente1.csv ---
+Total de registros: 3039967
+Registros válidos: 3029406 (99.65%)
+Timeouts/Perdas: 10561 (0.35%)
+
+--- ramp_data_cliente1_100.csv ---
+Total de registros: 3039958
+Registros válidos: 3028074 (99.61%)
+Timeouts/Perdas: 11884 (0.39%)
+
+--- ramp_data_cliente2.csv ---
+Total de registros: 3040019
+Registros válidos: 3027597 (99.59%)
+Timeouts/Perdas: 12422 (0.41%)
+
+--- ramp_data_cliente2_100.csv ---
+Total de registros: 3039960
+Registros válidos: 3027850 (99.60%)
+Timeouts/Perdas: 12110 (0.40%)
+
+--- ramp_data_cliente1_100.csv ---
+Total de registros: 3039958
+Registros válidos: 3028074 (99.61%)
+Timeouts/Perdas: 11884 (0.39%)
+
+--- ramp_data_cliente2_100.csv ---
+Total de registros: 3039960
+Registros válidos: 3027850 (99.60%)
+Timeouts/Perdas: 12110 (0.40%)
+
 ### ANÁLISE AGREGADA POR REDE ###
+
+--- REDE DE 10 Mbps ---
+RTT médio geral: 1.881 ms
+Taxa de perda média: 0.65%
+Taxa de perda máxima: 50.00%
+Taxa de perda mínima: 0.00%
+Tamanho com maior perda: 3048 bytes (50.00%)
 
 --- REDE DE 100 Mbps ---
 RTT médio geral: 3.965 ms
-Taxa de perda média: 16.61%
-Taxa de perda máxima: 92.86%
+Taxa de perda média: 1.91%
+Taxa de perda máxima: 50.00%
 Taxa de perda mínima: 0.00%
-Tamanho com maior perda: 27 bytes (92.86%)
+Tamanho com maior perda: 307 bytes (50.00%)
 
 ============================================================

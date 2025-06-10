@@ -251,7 +251,6 @@ Para executar apenas uma vez:
 
 - **Tamanhos testados**: 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65507 bytes
 - **Medições por tamanho**: 1000
-- **Warmup**: 50 pacotes
 - **Timeout**: 10 segundos
 
 ---
