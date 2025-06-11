@@ -286,7 +286,7 @@ try:
             ax.plot(df_100['tamanho_bytes'], df_100['taxa_perda_agregada_%'], 's-', 
                     color='#1565C0', linewidth=2, markersize=5, label='Rede 100 Mbps')
             ax.set_xscale('log', base=2)
-            ax.set_ylim(0, 100)
+            ax.set_ylim(0, 50)  # Alterado de 0, 60 para 0, 50
             ax.set_title('Comparação de Taxa de Perda: 10 Mbps vs 100 Mbps', 
                         fontsize=14, fontweight='bold')
             ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
@@ -311,7 +311,7 @@ try:
                     ax.plot(df_100['tamanho_bytes'], df_100[perda_col], 's-', 
                             color='#1565C0', linewidth=2, markersize=5, label='Cliente 1 - 100 Mbps')
                     ax.set_xscale('log', base=2)
-                    ax.set_ylim(0, 100)
+                    ax.set_ylim(0, 50)  # Alterado de 0, 60 para 0, 50
                     ax.set_title('Comparação de Taxa de Perda: 10 Mbps vs 100 Mbps (Cliente 1)', 
                                 fontsize=14, fontweight='bold')
                     ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
@@ -346,6 +346,7 @@ try:
             ax.plot(df_100['tamanho_bytes'], df_100['jitter_agregado_ms'], 's', 
                     color='#4CAF50', markersize=3, alpha=0.7)
             ax.set_xscale('log', base=2)
+            ax.set_ylim(0, 65)  # Alterado de 0, 100 para 0, 65
             ax.set_title('Comparação de Jitter Médio: 10 Mbps vs 100 Mbps', 
                         fontsize=14, fontweight='bold')
             ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
@@ -374,6 +375,7 @@ try:
                     ax.plot(df_100['tamanho_bytes'], df_100[jitter_col], 's', 
                             color='#4CAF50', markersize=3, alpha=0.7)
                     ax.set_xscale('log', base=2)
+                    ax.set_ylim(0, 65)  # Alterado de 0, 100 para 0, 65
                     ax.set_title('Comparação de Jitter Médio: 10 Mbps vs 100 Mbps (Cliente 1)', 
                                 fontsize=14, fontweight='bold')
                     ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
@@ -408,6 +410,7 @@ try:
             ax.plot(df_100['tamanho_bytes'], df_100['p99_agregado_ms'], '--', 
                     color='#2196F3', linewidth=2, label='100 Mbps - P99')
             ax.set_xscale('log', base=2)
+            ax.set_ylim(0, 250)  # Adicionado limite do eixo Y
             ax.set_title('Comparação de Percentis P95 e P99', 
                         fontsize=14, fontweight='bold')
             ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
@@ -434,6 +437,7 @@ try:
                 ax.plot(df_100['tamanho_bytes'], df_100['p99_ms'], '--', 
                         color='#2196F3', linewidth=2, label='Cliente 1 100 Mbps - P99')
                 ax.set_xscale('log', base=2)
+                ax.set_ylim(0, 250)  # Adicionado limite do eixo Y
                 ax.set_title('Comparação de Percentis P95 e P99 (Cliente 1)', 
                             fontsize=14, fontweight='bold')
                 ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
@@ -551,6 +555,7 @@ try:
                         fmt='s-', color='#2E7D32', linewidth=2, markersize=4, 
                         capsize=3, label='100 Mbps (IC 98%)')
             ax.set_xscale('log', base=2)
+            ax.set_ylim(0, 130)  # Alterado de 0, 200 para 0, 130
             ax.set_title('Cliente 1: Comparação entre Redes 10 e 100 Mbps', 
                         fontsize=14, fontweight='bold')
             ax.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
@@ -623,6 +628,7 @@ try:
                 ax.plot(df_100_1k[nivel_col], df_100_1k[rtt_col], 's', 
                         color='#00695C', markersize=3, alpha=0.7, label='100 Mbps (pontos)')
                 ax.set_xlim(1, 19)
+                ax.set_ylim(0, 80)  # Adicionado limite do eixo Y
                 ax.set_title('Rampa - Cliente 1: RTT vs Nível de Carga (1KB)', 
                             fontsize=14, fontweight='bold')
                 ax.set_xlabel('Nível da Rampa (1=10 req/s → 10=100 req/s → 19=10 req/s)', 
@@ -652,32 +658,99 @@ try:
             perda_col = 'taxa_perda_%' if 'taxa_perda_%' in df_10.columns else (
                 df_10.columns[13] if len(df_10.columns) > 13 else df_10.columns[-1])
             
-            df_10_1k = df_10[df_10['tamanho_bytes'] == 1024].copy()
-            df_100_1k = df_100[df_100['tamanho_bytes'] == 1024].copy()
-            df_10_64k = df_10[df_10['tamanho_bytes'] == 65507].copy()
-            df_100_64k = df_100[df_100['tamanho_bytes'] == 65507].copy()
-            fig, ax = plt.subplots(figsize=(12, 8))
+            df_10_1k = df_10[df_10['tamanho_bytes'] == 1024].copy() if 'tamanho_bytes' in df_10.columns else df_10.copy()
+            df_100_1k = df_100[df_100['tamanho_bytes'] == 1024].copy() if 'tamanho_bytes' in df_100.columns else df_100.copy()
+            df_10_64k = df_10[df_10['tamanho_bytes'] == 65507].copy() if 'tamanho_bytes' in df_10.columns else pd.DataFrame()
+            df_100_64k = df_100[df_100['tamanho_bytes'] == 65507].copy() if 'tamanho_bytes' in df_100.columns else pd.DataFrame()
             
-            if not df_10_1k.empty:
-                ax.plot(df_10_1k[nivel_col], df_10_1k[perda_col], 'o-', 
-                        color='#E53935', linewidth=2, markersize=4, label='10 Mbps - 1KB')
-            if not df_100_1k.empty:
-                ax.plot(df_100_1k[nivel_col], df_100_1k[perda_col], 's-', 
-                        color='#43A047', linewidth=2, markersize=4, label='100 Mbps - 1KB')
-            if not df_10_64k.empty:
-                ax.plot(df_10_64k[nivel_col], df_10_64k[perda_col], 'o--', 
-                        color='#FF8A80', linewidth=2, markersize=4, label='10 Mbps - 64KB')
-            if not df_100_64k.empty:
-                ax.plot(df_100_64k[nivel_col], df_100_64k[perda_col], 's--', 
-                        color='#A5D6A7', linewidth=2, markersize=4, label='100 Mbps - 64KB')
-            ax.set_xlim(1, 19)
-            ax.set_ylim(0, 100)
-            ax.set_title('Taxa de Perda vs Nível de Rampa - Cliente 1', 
-                        fontsize=14, fontweight='bold')
-            ax.set_xlabel('Nível da Rampa', fontsize=12)
-            ax.set_ylabel('Taxa de Perda (%)', fontsize=12)
-            ax.grid(True, alpha=0.3, linestyle='--')
-            ax.legend()
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+            fig.suptitle('Análise de Taxa de Perda vs Nível de Rampa - Cliente 1', 
+                        fontsize=16, fontweight='bold')
+            
+            if not df_10_1k.empty and nivel_col in df_10_1k.columns and perda_col in df_10_1k.columns:
+                ax1.fill_between(df_10_1k[nivel_col], 0, df_10_1k[perda_col], 
+                               alpha=0.3, color='#E53935', label='10 Mbps - 1KB (área)')
+                ax1.plot(df_10_1k[nivel_col], df_10_1k[perda_col], 'o-', 
+                        color='#E53935', linewidth=3, markersize=8, 
+                        markeredgecolor='white', markeredgewidth=2,
+                        label='10 Mbps - 1KB')
+                
+            if not df_100_1k.empty and nivel_col in df_100_1k.columns and perda_col in df_100_1k.columns:
+                ax1.fill_between(df_100_1k[nivel_col], 0, df_100_1k[perda_col], 
+                               alpha=0.3, color='#43A047', label='100 Mbps - 1KB (área)')
+                ax1.plot(df_100_1k[nivel_col], df_100_1k[perda_col], 's-', 
+                        color='#43A047', linewidth=3, markersize=8,
+                        markeredgecolor='white', markeredgewidth=2,
+                        label='100 Mbps - 1KB')
+            
+            ax1.set_xlim(1, 19)
+            ax1.set_ylim(-0.1, 2.5)
+            ax1.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.8)
+            ax1.set_title('Taxa de Perda - Payloads 1KB', fontsize=14, fontweight='bold')
+            ax1.set_xlabel('Nível da Rampa', fontsize=12)
+            ax1.set_ylabel('Taxa de Perda (%)', fontsize=12)
+            ax1.grid(True, alpha=0.3, linestyle='--')
+            ax1.set_xticks(range(1, 20, 2))
+            ax1.set_yticks([0, 0.5, 1.0, 1.5, 2.0])
+            
+            ax1.text(10, 2.3, 'Rampa: 10→100→10 req/s', ha='center', fontsize=10, 
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='lightblue', alpha=0.7))
+            
+            if ax1.get_lines():
+                ax1.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+            
+            x_pos = np.arange(1, 19)
+            bar_width = 0.35
+            
+            if not df_10_1k.empty and nivel_col in df_10_1k.columns and perda_col in df_10_1k.columns:
+                y_10 = [df_10_1k[df_10_1k[nivel_col] == x][perda_col].iloc[0] if len(df_10_1k[df_10_1k[nivel_col] == x]) > 0 else 0 for x in x_pos]
+                bars1 = ax2.bar(x_pos - bar_width/2, y_10, bar_width, 
+                               color='#E53935', alpha=0.8, label='10 Mbps - 1KB',
+                               edgecolor='white', linewidth=1)
+                
+                for i, (bar, val) in enumerate(zip(bars1, y_10)):
+                    if val > 0.01:
+                        ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02, 
+                               f'{val:.2f}%', ha='center', va='bottom', fontsize=8)
+                
+            if not df_100_1k.empty and nivel_col in df_100_1k.columns and perda_col in df_100_1k.columns:
+                y_100 = [df_100_1k[df_100_1k[nivel_col] == x][perda_col].iloc[0] if len(df_100_1k[df_100_1k[nivel_col] == x]) > 0 else 0 for x in x_pos]
+                bars2 = ax2.bar(x_pos + bar_width/2, y_100, bar_width, 
+                               color='#43A047', alpha=0.8, label='100 Mbps - 1KB',
+                               edgecolor='white', linewidth=1)
+                
+                for i, (bar, val) in enumerate(zip(bars2, y_100)):
+                    if val > 0.01:
+                        ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02, 
+                               f'{val:.2f}%', ha='center', va='bottom', fontsize=8)
+            
+            all_zero = True
+            if not df_10_1k.empty and perda_col in df_10_1k.columns:
+                if df_10_1k[perda_col].max() > 0:
+                    all_zero = False
+            if not df_100_1k.empty and perda_col in df_100_1k.columns:
+                if df_100_1k[perda_col].max() > 0:
+                    all_zero = False
+            
+            if all_zero:
+                ax2.text(10, 1, 'Taxa de Perda = 0% em todos os níveis\n(Excelente qualidade da rede)', 
+                        ha='center', va='center', fontsize=12, 
+                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8))
+            
+            ax2.set_xlim(0, 19)
+            ax2.set_ylim(0, 2.5)
+            ax2.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.8)
+            ax2.set_title('Taxa de Perda - Visualização em Barras', fontsize=14, fontweight='bold')
+            ax2.set_xlabel('Nível da Rampa', fontsize=12)
+            ax2.set_ylabel('Taxa de Perda (%)', fontsize=12)
+            ax2.grid(True, alpha=0.3, linestyle='--', axis='y')
+            ax2.set_xticks(x_pos)
+            ax2.set_xticklabels([str(x) for x in x_pos])
+            ax2.set_yticks([0, 0.5, 1.0, 1.5, 2.0])
+            
+            if ax2.get_legend_handles_labels()[0]:
+                ax2.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+            
             plt.tight_layout()
             plt.savefig('graficos/11_ramp_perda_vs_nivel.png', dpi=300, bbox_inches='tight')
             plt.close()
