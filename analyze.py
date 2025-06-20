@@ -108,13 +108,13 @@ def read_ramp_data(filepath):
 
 def detect_outliers(rtts):
     if len(rtts) < 4:
-        return 0, []
+        return 0, set()
     sorted_rtts = sorted(rtts)
     q1 = sorted_rtts[len(sorted_rtts) // 4]
     q3 = sorted_rtts[3 * len(sorted_rtts) // 4]
     iqr = q3 - q1
     low, up = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-    outliers = [x for x in rtts if x < low or x > up]
+    outliers = set(x for x in rtts if x < low or x > up)
     return len(outliers), outliers
 
 
@@ -134,13 +134,24 @@ def compute_stats(rtts, total_attempts=None):
     if n == 0:
         return (0, *(float("nan"),) * 10, 100.0, 0)
 
-    rtts_sorted = sorted(rtts)
+    # Detectar e remover outliers antes dos cálculos
+    num_outliers, outliers = detect_outliers(rtts)
+    rtts_clean = [x for x in rtts if x not in outliers]
+    
+    # Se todos os valores foram removidos como outliers, usar dados originais
+    if len(rtts_clean) == 0:
+        rtts_clean = rtts
+        num_outliers = 0
+    
+    rtts_sorted = sorted(rtts_clean)
+    n_clean = len(rtts_sorted)
+    
     media   = statistics.mean(rtts_sorted)
     mediana = statistics.median(rtts_sorted)
-    dp      = statistics.stdev(rtts_sorted) if n > 1 else 0.0
+    dp      = statistics.stdev(rtts_sorted) if n_clean > 1 else 0.0
     jitter  = (statistics.mean([abs(rtts_sorted[i] - rtts_sorted[i - 1])
-               for i in range(1, n)]) if n > 1 else 0.0)
-    ic_half = Z_98 * (dp / sqrt(n)) if n > 1 else 0.0
+               for i in range(1, n_clean)]) if n_clean > 1 else 0.0)
+    ic_half = Z_98 * (dp / sqrt(n_clean)) if n_clean > 1 else 0.0
     ic_low  = media - ic_half
     ic_up   = media + ic_half
     p95     = compute_percentile(rtts_sorted, 95)
@@ -148,9 +159,8 @@ def compute_stats(rtts, total_attempts=None):
     min_rtt, max_rtt = rtts_sorted[0], rtts_sorted[-1]
     taxa_perda = ((total_attempts - n) / total_attempts * 100
                   if total_attempts else 0.0)
-    num_outliers, _ = detect_outliers(rtts_sorted)
 
-    return (n, media, mediana, dp, jitter, ic_low, ic_up,
+    return (n_clean, media, mediana, dp, jitter, ic_low, ic_up,
             p95, p99, min_rtt, max_rtt, taxa_perda, num_outliers)
 
 def process_raw_files_by_network(network_speed):
@@ -179,7 +189,7 @@ def process_raw_files_by_network(network_speed):
                 "tamanho_bytes", "n_validos", "media_ms", "mediana_ms",
                 "dp_ms", "jitter_ms", "ic_lower_ms", "ic_upper_ms",
                 "p95_ms", "p99_ms", "min_ms", "max_ms",
-                "taxa_perda_%", "num_outliers"
+                "taxa_perda_%", "num_outliers", "rtt_ms"
             ])
 
             for size in sorted(data.keys()):
@@ -189,7 +199,8 @@ def process_raw_files_by_network(network_speed):
                 writer.writerow([
                     size, stats[0],
                     *(f"{x:.5f}" for x in stats[1:10]),
-                    f"{stats[10]:.5f}", f"{stats[11]:.2f}", stats[12]
+                    f"{stats[10]:.5f}", f"{stats[11]:.2f}", stats[12],
+                    f"{stats[1]:.5f}"  # rtt_ms (mesmo valor que media_ms)
                 ])
 
         print(f"[SUCCESS] Estatísticas salvas em {out_path}")
@@ -221,7 +232,7 @@ def process_ramp_files_by_network(network_speed):
                 "tamanho_bytes", "nivel", "n_validos", "media_ms", "mediana_ms",
                 "dp_ms", "jitter_ms", "ic_lower_ms", "ic_upper_ms",
                 "p95_ms", "p99_ms", "min_ms", "max_ms",
-                "taxa_perda_%", "num_outliers"
+                "taxa_perda_%", "num_outliers", "rtt_ms"
             ])
 
             for (size, nivel) in sorted(data.keys(), key=lambda x: (x[0], x[1])):
@@ -231,7 +242,8 @@ def process_ramp_files_by_network(network_speed):
                 writer.writerow([
                     size, nivel, stats[0],
                     *(f"{x:.5f}" for x in stats[1:10]),
-                    f"{stats[10]:.5f}", f"{stats[11]:.2f}", stats[12]
+                    f"{stats[10]:.5f}", f"{stats[11]:.2f}", stats[12],
+                    f"{stats[1]:.5f}"  # rtt_ms (mesmo valor que media_ms)
                 ])
 
         print(f"[SUCCESS] Estatísticas de rampa salvas em {out_path}")
@@ -270,17 +282,23 @@ def aggregate_clients_by_network(network_speed):
         writer.writerow([
             "tamanho_bytes", "media_agregada_ms", "mediana_agregada_ms",
             "p95_agregado_ms", "p99_agregado_ms", "jitter_agregado_ms",
-            "taxa_perda_agregada_%", "n_total_amostras"
+            "taxa_perda_agregada_%", "dp_perda_agregada", "n_total_amostras", "rtt_ms", "dp_agregado_ms"
         ])
 
         for size in sorted(aggregated):
             agg = aggregated[size]
+            media_mean = statistics.mean(agg["media"])
+            media_std = statistics.stdev(agg["media"]) if len(agg["media"]) > 1 else 0.0
+            perda_std = statistics.stdev(agg["taxa_perda"]) if len(agg["taxa_perda"]) > 1 else 0.0
             writer.writerow([
                 size,
                 *(f"{statistics.mean(agg[key]):.5f}" for key in
                   ("media", "mediana", "p95", "p99", "jitter")),
                 f"{statistics.mean(agg['taxa_perda']):.2f}",
-                agg["n_total"]
+                f"{perda_std:.5f}",
+                agg["n_total"],
+                f"{media_mean:.5f}",
+                f"{media_std:.5f}"
             ])
 
     print(f"[SUCCESS] Dados agregados salvos em {out_path}")

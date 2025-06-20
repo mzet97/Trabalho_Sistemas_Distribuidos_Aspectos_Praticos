@@ -1,0 +1,65 @@
+============================================================
+Gerando grßficos interpretativos a partir dos dados de rede
+============================================================
+
+=== INICIANDO GERAÃ├O DE GR┴FICOS ===
+
+0. Verificando/criando estatÝsticas de rede...
+
+1. Gerando: RTT vs Tamanho - Cliente 1 (10 Mbps) [Simplificado]
+ 01_rtt_cliente1_10mbps.png (RTT com barras de erro)
+
+2. Gerando: RTT vs Tamanho - Cliente 1 (100 Mbps) [Simplificado]
+ 02_rtt_cliente1_100mbps.png (RTT com barras de erro)
+
+3. Gerando: ComparaþÒo Direta RTT (10 vs 100 Mbps)
+ 03_comparacao_rtt_redes.png (com tamanhos especÝficos)
+
+4. Gerando: ComparaþÒo de Taxa de Perda (10 vs 100 Mbps)
+ 04_comparacao_perda_redes.png (com tamanhos especÝficos)
+
+5. Gerando: ComparaþÒo de Jitter MÚdio (10 vs 100 Mbps)
+ 05_comparacao_jitter_redes.png (com tamanhos especÝficos)
+
+6. Gerando: ComparaþÒo de Percentis P95 e P99
+ 06_comparacao_percentis.png (com tamanhos especÝficos)
+
+7. Gerando: Dashboard Resumido
+ 07_dashboard_rede_comparativo.png (versÒo limpa)
+
+8. Gerando: Cliente 1 - ComparaþÒo entre Redes
+ 08_cliente1_comparacao_rede.png (com tamanhos especÝficos)
+
+9. Gerando: Cliente 2 - ComparaþÒo entre Redes
+ 09_cliente2_comparacao_rede.png (com tamanhos especÝficos)
+
+10. Gerando: Rampa Cliente 1 - RTT vs NÝvel de Carga
+ 10_ramp_cliente1_rtt_carga.png
+
+11. Gerando: Taxa de Perda vs NÝvel de Rampa
+ 11_ramp_perda_vs_nivel.png
+
+12. Gerando: Anßlise de SaturaþÒo - RTT Normalizado
+ 12_analise_saturacao.png
+
+=== GERAÃ├O DE GR┴FICOS CONCLU═DA ===
+
+  Ok 01_rtt_cliente1_10mbps.png (176,395 bytes)
+  Ok 02_rtt_cliente1_100mbps.png (168,775 bytes)
+  Ok 03_comparacao_rtt_redes.png (264,353 bytes)
+  Ok 04_comparacao_perda_redes.png (282,881 bytes)
+  Ok 05_comparacao_jitter_redes.png (227,868 bytes)
+  Ok 06_comparacao_percentis.png (344,953 bytes)
+  Ok 07_dashboard_rede_comparativo.png (485,142 bytes)
+  Ok 08_cliente1_comparacao_rede.png (285,225 bytes)
+  Ok 09_cliente2_comparacao_rede.png (291,943 bytes)
+  Ok 10_ramp_cliente1_rtt_carga.png (183,416 bytes)
+  Ok 11_ramp_perda_vs_nivel.png (312,724 bytes)
+  Ok 12_analise_saturacao.png (243,461 bytes)
+
+ Total de grßficos gerados: 12/12
+ Tamanho total: 3,267,136 bytes (3.1 MB)
+
+============================================================
+Todos os grßficos estÒo no diret¾rio 'graficos/'
+============================================================
